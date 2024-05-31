@@ -16,3 +16,4 @@ write_csv(contact_angle_images, file = './Data/contact_angle_images.csv')
 set.seed(1)
 slice_sample(contact_angle_images, n = 10) %>% 
   arrange(filename)
+
