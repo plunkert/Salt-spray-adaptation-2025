@@ -33,23 +33,39 @@ stomata =  read_csv('./Data/stomatal_density_data_06-13-24.csv') %>%
     amphistomy = stomata_count_ad / stomata_count_ab 
   )
   
-View(stomata)
+#View(stomata)
 
 # Compare Abaxial vs. Adaxial Stomata Counts for each pop
-stomata %>%
+oae_bhe_amphistomy = stomata %>%
   filter(pop.code %in% c('BHE', 'OAE')) %>%
   mutate(pop.code = if_else(pop.code == 'BHE', 'Inland (BHE)', 'Coastal (OAE)')) %>%
   ggplot() +
   aes(x = pop.code, fill = pop.code, y = stomata_count_ab / stomata_count_total * 100) +
-  geom_boxplot() +
+  geom_boxplot(outliers = F) +
+  geom_hline(yintercept = 50, linetype = 'longdash') +
   # Labels
   scale_x_discrete(name = 'Population') +
-  scale_y_continuous(name = 'Percent of Stomata on Adaxial Surface') +
+  scale_y_continuous(
+    name = 'Percent of Stomata on Adaxial Surface', 
+    limits = c(40, 60)
+  ) +
   # Style
   scale_fill_manual(values = c('#514663', '#cacf85')) +
   theme_minimal() +
   theme(
-    legend.position = "none"
+    legend.position = "none",
   )
+oae_bhe_amphistomy
+
+ggsave(
+  filename = 'Prelim_Amphistomy.png', 
+  plot = oae_bhe_amphistomy,
+  device = 'png',
+  path = './Results/Figures/',
+  scale = 1,
+  width = 3,
+  height = 6,
+  bg = 'white'
+)
 
 
