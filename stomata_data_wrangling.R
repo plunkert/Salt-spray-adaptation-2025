@@ -1,34 +1,55 @@
+# Primary contributor: Cam
+# Purpose: Preliminary analysis of stomata data to compare BHE and OAE populations
+
 require(tidyverse)
 require(readxl)
 
+# Data wrangling
 stomata =  read_csv('./Data/stomatal_density_data_06-13-24.csv') %>%
-  filter(!is.na(stomata_count)) %>%
-  separate(col = file_name, sep = '_',
-           into = c('pop.code', 'replicate', 'leaf_side', 'view_rep')) %>%
+  # Remove missing data
+  filter(!is.na(stomata_count)) %>% 
+  # Separate file_name column
+  separate(
+    col = file_name, 
+    sep = '_',
+    into = c('pop.code', 'replicate', 'leaf_side', 'view_rep')
+  ) %>%
+  # Get average stomata count for each leaf side
   group_by(pop.code, replicate, leaf_side) %>%
   summarize(stomata_count = mean(.data[['stomata_count']], na.rm = TRUE)) %>%
-  ungroup()
+  ungroup() %>%
+  # Reshape data
+  pivot_wider(
+    id_cols = c(pop.code, replicate), 
+    names_from = leaf_side,
+    values_from = stomata_count,
+    names_prefix = "stomata_count_",
+  ) %>%
+  # Create more stomata columns
+  mutate(
+    # Total amount of stomata on both sides
+    stomata_count_total = stomata_count_ab + stomata_count_ad, 
+    # Adaxial vs. abaxial ratio, 1 = equal stomata, >1 more stomata on abaxial side
+    amphistomy = stomata_count_ad / stomata_count_ab 
+  )
+  
 View(stomata)
 
+# Compare Abaxial vs. Adaxial Stomata Counts for each pop
 stomata %>%
-  filter(pop.code %in% c('OAE', 'BHE')) %>%
-  filter(leaf_side == 'ad') %>%
+  filter(pop.code %in% c('BHE', 'OAE')) %>%
+  mutate(pop.code = if_else(pop.code == 'BHE', 'Inland (BHE)', 'Coastal (OAE)')) %>%
   ggplot() +
-  aes(x=stomata_count) +
-  facet_wrap(vars(pop.code), nrow = 2) +
-  geom_boxplot()
-
-stomata %>%
-  filter(pop.code %in% c('OAE', 'BHE')) %>%
-  ggplot() +
-  aes(x=stomata_count) +
-  facet_wrap(vars(pop.code, leaf_side), nrow = 2) +
-  geom_boxplot()
-
-stomata %>%
-  filter(pop.code %in% c('OAE', 'BHE')) %>%
-  ggplot() +
-  aes(y=stomata_count, x=pop.code) +
-  facet_wrap(vars(pop.code, leaf_side), nrow = 2) +
+  aes(x = pop.code, fill = pop.code, y = stomata_count_ab / stomata_count_total * 100) +
   geom_boxplot() +
-  geom_jitter(color="black", size=0.4, alpha=0.9)
+  # Labels
+  scale_x_discrete(name = 'Population') +
+  scale_y_continuous(name = 'Percent of Stomata on Adaxial Surface') +
+  # Style
+  scale_fill_manual(values = c('#514663', '#cacf85')) +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  )
+
+
