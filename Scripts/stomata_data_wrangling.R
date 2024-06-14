@@ -38,10 +38,11 @@ stomata =  read_csv('./Data/stomatal_density_data_06-13-24.csv') %>%
 # Compare Abaxial vs. Adaxial Stomata Counts for each pop
 oae_bhe_amphistomy = stomata %>%
   filter(pop.code %in% c('BHE', 'OAE')) %>%
-  mutate(pop.code = if_else(pop.code == 'BHE', 'Inland (BHE)', 'Coastal (OAE)')) %>%
+  mutate(pop.code = if_else(pop.code == 'BHE', 'Coastal (BHE)', 'Inland (OAE)')) %>%
   ggplot() +
-  aes(x = pop.code, fill = pop.code, y = stomata_count_ab / stomata_count_total * 100) +
+  aes(x = pop.code, fill = pop.code, y = stomata_count_ad / stomata_count_total * 100) +
   geom_boxplot(outliers = F) +
+  geom_jitter(position=position_jitter(0.1)) +
   geom_hline(yintercept = 50, linetype = 'longdash') +
   # Labels
   scale_x_discrete(name = 'Population') +
@@ -54,6 +55,8 @@ oae_bhe_amphistomy = stomata %>%
   theme_minimal() +
   theme(
     legend.position = "none",
+    axis.text = element_text(size=12),
+    axis.title = element_text(size=14),
   )
 oae_bhe_amphistomy
 
@@ -68,4 +71,12 @@ ggsave(
   bg = 'white'
 )
 
+# T-tests for difference in stomatal ratio and each surface stomatal number
 
+# subset dataframe for only OAE, BHE values
+oae_bhe <- stomata[which(stomata$pop.code == "BHE" | stomata$pop.code == "OAE"),]
+t.test(data=oae_bhe, amphistomy ~ pop.code)
+
+t.test(data=oae_bhe, stomata_count_ab ~ pop.code)
+
+t.test(data=oae_bhe, stomata_count_ad ~ pop.code)
