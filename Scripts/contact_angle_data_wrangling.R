@@ -93,7 +93,7 @@ contact_ad_boxplot = contact_angle %>%
   # Labels
   scale_x_discrete(name = 'Ecotype') +
   scale_y_continuous(
-    name = 'Contact Angle (degrees)', 
+    name = 'Contact Angle (degrees) on Adaxial Surface', 
   ) +
   # Style
   scale_fill_manual(values = c('#514663', '#cacf85')) +
@@ -125,7 +125,7 @@ contact_ab_boxplot = contact_angle %>%
   # Labels
   scale_x_discrete(name = 'Ecotype') +
   scale_y_continuous(
-    name = 'Contact Angle (degrees)', 
+    name = 'Contact Angle (degrees) on Abaxial Surface', 
   ) +
   # Style
   scale_fill_manual(values = c('#514663', '#cacf85')) +
