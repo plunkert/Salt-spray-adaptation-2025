@@ -28,6 +28,12 @@ contact_angle =  read_xlsx(
       pop.code %in% inland_pops ~ "inland",
       .default = NA_character_
     )
+  ) %>%
+  pivot_wider(
+    id_cols = c(pop.code, rep, ecotype, salt_exposure), 
+    names_from = leaf_side,
+    values_from = contact_angle,
+    names_prefix = "contact_angle_"
   )
 
 View(contact_angle)
@@ -35,36 +41,33 @@ View(contact_angle)
 # View coastal_data
 contact_angle %>%
   ggplot() +
-  aes(x=contact_angle) +
+  aes(x=contact_angle_ad) +
   geom_histogram()
 
 # Coastal vs. inland and ad vs. ab
 contact_angle %>%
-  filter(leaf_side == 'ad') %>%
   ggplot() +
-  aes(x=contact_angle) +
+  aes(x=contact_angle_ad) +
   facet_wrap(vars(ecotype), nrow = 2) +
   geom_histogram()
 
 contact_angle %>%
-  filter(leaf_side == 'ab') %>%
   ggplot() +
-  aes(x=contact_angle) +
+  aes(x=contact_angle_ab) +
   facet_wrap(vars(ecotype), nrow = 2) +
   geom_histogram()
 
 # How much of each pop?
 contact_angle %>%
-  filter(!is.na(contact_angle)) %>%
+  filter(!is.na(contact_angle_ad)) %>%
   group_by(pop.code) %>%
   count()
 
 # Comparing pairs
 contact_angle %>%
   filter(pop.code == 'RGR' | pop.code == 'OPB') %>%
-  filter(leaf_side == 'ad') %>%
   ggplot() +
-  aes(x=contact_angle) +
+  aes(x=contact_angle_ad) +
   facet_wrap(vars(ecotype), nrow = 2) +
   geom_boxplot()
 
@@ -72,22 +75,22 @@ contact_angle %>%
 contact_angle %>%
   filter(salt_exposure != "inland") %>%
   ggplot() +
-  aes(x=contact_angle) +
+  aes(x=contact_angle_ad) +
   facet_wrap(vars(salt_exposure), nrow = 2) +
   geom_boxplot()
 
 contact_angle %>%
-  filter(surface_type != "inland") %>%
+  filter(salt_exposure != "inland") %>%
   ggplot() +
-  aes(x=contact_angle) +
-  facet_wrap(vars(surface_type), nrow = 2) +
+  aes(x=contact_angle_ad) +
+  facet_wrap(vars(salt_exposure), nrow = 2) +
   geom_boxplot()
 
 
 contact_ad_boxplot = contact_angle %>%
-  filter(!is.na(contact_angle) & leaf_side=="ad") %>%
+  filter(!is.na(contact_angle_ad)) %>%
   ggplot() +
-  aes(x = ecotype, fill = ecotype, y = contact_angle) +
+  aes(x = ecotype, fill = ecotype, y = contact_angle_ad) +
   geom_boxplot(outliers = F) +
   geom_jitter(position=position_jitter(0.1)) +
   # Labels
@@ -117,9 +120,9 @@ ggsave(
 )
 
 contact_ab_boxplot = contact_angle %>%
-  filter(!is.na(contact_angle) & leaf_side=="ab") %>%
+  filter(!is.na(contact_angle_ab)) %>%
   ggplot() +
-  aes(x = ecotype, fill = ecotype, y = contact_angle) +
+  aes(x = ecotype, fill = ecotype, y = contact_angle_ab) +
   geom_boxplot(outliers = F) +
   geom_jitter(position=position_jitter(0.1)) +
   # Labels
@@ -148,6 +151,65 @@ ggsave(
   bg = 'white'
 )
 
-t.test(data=filter(contact_angle, leaf_side=="ad"), contact_angle ~ ecotype)
-t.test(data=filter(contact_angle, leaf_side=="ab"), contact_angle ~ ecotype)
+t.test(data=contact_angle, contact_angle_ad ~ ecotype)
+t.test(data=contact_angle, contact_angle_ab ~ ecotype)
+
+# Look at each pair of populations
+# subset dataframe for each population pair
+oae_bhe <- contact_angle[which(contact_angle$pop.code == "BHE" | contact_angle$pop.code == "OAE"),] %>% na.omit()
+tor_pgr <- contact_angle[which(contact_angle$pop.code == "PGR" | contact_angle$pop.code == "TOR"),] %>% na.omit()
+lmc_swb <- contact_angle[which(contact_angle$pop.code == "LMC" | contact_angle$pop.code == "SWB"),] %>% na.omit()
+rgr_opb <- contact_angle[which(contact_angle$pop.code == "RGR" | contact_angle$pop.code == "OPB"),] %>% na.omit()
+swc_hec <- contact_angle[which(contact_angle$pop.code == "SWC" | contact_angle$pop.code == "HEC"),] %>% na.omit()
+pairs <- list(swc_hec, rgr_opb, lmc_swb, oae_bhe, tor_pgr)
+
+# make a function that takes the dataframe with a population pair and a variable of interest
+plot_each_pair <- function (pair, var) {
+  pops=unique(pair$pop.code)
+  na.omit(pair) %>%
+    ggplot() +
+    aes(x = ecotype, fill = ecotype, y = pair[[var]]) +
+    geom_boxplot(outliers = F) +
+    geom_jitter(position=position_jitter(0.1)) +
+    # Labels
+    scale_x_discrete(name = 'Ecotype') +
+    scale_y_continuous(
+      name = var 
+    ) +
+    ggtitle(paste(as.character(unique(pair$pop.code))[1], " / ", as.character(unique(pair$pop.code))[2]))+
+    # Style
+    scale_fill_manual(values = c('#514663', '#cacf85')) +
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      axis.text = element_text(size=12),
+      axis.title = element_text(size=14)
+    )
+}
+plot_each_pair(tor_pgr, "contact_angle_ad")
+plots <- lapply(pairs, plot_each_pair, "contact_angle_ad")
+ad_contact_angle_pair_plots <- ggarrange(plotlist=plots, ncol=2, nrow=3)
+ggsave(
+  filename = 'Adaxial_Contact_Angle_Pairs.png', 
+  plot = ad_contact_angle_pair_plots,
+  device = 'png',
+  path = './Results/Figures/',
+  scale = 1,
+  width = 6,
+  height = 6,
+  bg = 'white'
+)
+
+plots <- lapply(pairs, plot_each_pair, "contact_angle_ab")
+ab_contact_angle_pair_plots <- ggarrange(plotlist=plots, ncol=2, nrow=3)
+ggsave(
+  filename = 'Abaxial_Contact_Angle_Pairs.png', 
+  plot = ad_contact_angle_pair_plots,
+  device = 'png',
+  path = './Results/Figures/',
+  scale = 1,
+  width = 6,
+  height = 6,
+  bg = 'white'
+)
 
