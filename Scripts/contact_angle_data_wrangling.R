@@ -109,7 +109,7 @@ contact_ad_boxplot = contact_angle %>%
 contact_ad_boxplot
 
 ggsave(
-  filename = 'Prelim_ad_contact_angle.png', 
+  filename = 'Ad_contact_angle_ecotype.png', 
   plot = contact_ad_boxplot,
   device = 'png',
   path = './Results/Figures/',
@@ -141,7 +141,7 @@ contact_ab_boxplot = contact_angle %>%
 contact_ab_boxplot
 
 ggsave(
-  filename = 'Prelim_ab_contact_angle.png', 
+  filename = 'Ab_contact_angle_ecotype.png', 
   plot = contact_ab_boxplot,
   device = 'png',
   path = './Results/Figures/',
@@ -151,8 +151,22 @@ ggsave(
   bg = 'white'
 )
 
+# t-tests
 t.test(data=contact_angle, contact_angle_ad ~ ecotype)
 t.test(data=contact_angle, contact_angle_ab ~ ecotype)
+
+# fit nested ANOVA
+m_nest_ad <- aov(data=contact_angle, contact_angle_ad ~ ecotype/pop.code)
+summary(m_nest_ad)
+coefficients(m_nest_ad)
+
+m_nest_ab <- aov(data=contact_angle, contact_angle_ab ~ ecotype/pop.code)
+
+summary(m_nest_ab)
+coefficients(m_nest_ab)
+
+summary(lm(data=contact_angle, contact_angle_ab ~ ecotype + ecotype:pop.code))
+
 
 # Look at each pair of populations
 # subset dataframe for each population pair

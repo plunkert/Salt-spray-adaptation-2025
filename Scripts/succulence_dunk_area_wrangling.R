@@ -7,7 +7,6 @@ require(readxl)
 require(ggpubr)
 require(readxl)
 
-setwd("~/Documents/Github/Leaf-surface-traits-2024/")
 
 # Read leaf area data into R
 area <- read_excel("./Data/leaf_area_data.xlsx", sheet="Sheet1")
@@ -18,8 +17,6 @@ table(area$pop_code)
 dat <- read_excel("./Data/leaf_surface_data.xlsx", sheet="Sheet1")
 colnames(dat)[1] <- "pop_code"
 # Merge with area (effectively, add area column to larger dataframe)
-dat_area <- merge(x = dat, y = area, dat, by = c(1, 2))
-
 dat_area <- merge(area, dat, by = c("pop_code", "rep"))
 
 # Add salt exposure, ecotype
@@ -40,7 +37,7 @@ dat_area <- dat_area %>% mutate(ecotype = as.factor(if_else(salt_exposure=="inla
 dat_area$succulence <- (dat_area$fresh.mass - dat_area$dry.mass)/dat_area$leaf_area_cm2
 
 # Calculate result of dunk assay as grams of water that hung onto leaf surface / leaf area
-dat_area$dunk_result <- (dat_area$dunked.mass - dat_area$fresh.mass)/dat_area$leaf_area_cm2
+dat_area$dunk_result <- (dat_area$dunked.mass - dat_area$fresh.mass)/(2*dat_area$leaf_area_cm2)
 
 # Dunk assay felt error-prone because of the way you hold the leaf. Does accession explain
 # variation in dunk result?
@@ -97,6 +94,7 @@ ggsave(
 
 
 summary(lm(data=dat_area, succulence ~ ecotype))
+
 summary(lm(data=dat_area, dunk_result ~ ecotype))
 
 # Fit nested anovas for dunk assay and succulence

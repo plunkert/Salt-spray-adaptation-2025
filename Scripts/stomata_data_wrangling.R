@@ -232,8 +232,10 @@ ggsave(
 
 
 # make a function that takes the dataframe with a population pair and a variable of interest
-plot_each_pair <- function (pair, var) {
+plot_each_pair <- function (pair, var, ylab) {
   pops=unique(pair$pop_code)
+  coastal <- c("BHE","HEC", "OPB", "PGR", "SWB")
+  codes <- unique(pair$pop_code)
   na.omit(pair) %>%
     ggplot() +
     aes(x = ecotype, fill = ecotype, y = pair[[var]]) +
@@ -242,8 +244,10 @@ plot_each_pair <- function (pair, var) {
     # Labels
     scale_x_discrete(name = 'Ecotype') +
     scale_y_continuous(
-      name = var 
-    ) +
+      name = ylab
+    )+
+    ggtitle(paste(as.character(codes[which(codes %in% coastal)]), " / ", as.character(codes[which(codes %in% inland)])))+
+    
     ggtitle(paste(as.character(unique(pair$pop_code))[1], " / ", as.character(unique(pair$pop_code))[2]))+
     # Style
     scale_fill_manual(values = c('#514663', '#cacf85')) +
@@ -251,51 +255,9 @@ plot_each_pair <- function (pair, var) {
     theme(
       legend.position = "none",
       axis.text = element_text(size=12),
-      axis.title = element_text(size=14)
+      axis.title = element_text(size=12)
       )
 }
-
-# Compare adaxial stomata for each population pair
-plots <- lapply(pairs, plot_each_pair, "stomata_count_ad")
-ad_pair_plots <- ggarrange(plotlist=plots, ncol=2, nrow=3)
-ggsave(
-  filename = 'Ad_Stomata_Pairs.png', 
-  plot = ad_pair_plots,
-  device = 'png',
-  path = './Results/Figures/',
-  scale = 1,
-  width = 6,
-  height = 6,
-  bg = 'white'
-)
-
-# Compare abaxial stomata for each population pair
-plots <- lapply(pairs, plot_each_pair, "stomata_count_ab")
-ab_pair_plots <- ggarrange(plotlist=plots, ncol=2, nrow=3)
-ggsave(
-  filename = 'Ab_Stomata_Pairs.png', 
-  plot = ab_pair_plots,
-  device = 'png',
-  path = './Results/Figures/',
-  scale = 1,
-  width = 6,
-  height = 6,
-  bg = 'white'
-)
-
-# Compare stomatal ratio for each population pair
-plots <- lapply(pairs, plot_each_pair, "amphistomy")
-amphistomy_pair_plots <- ggarrange(plotlist=plots, ncol=2, nrow=3)
-ggsave(
-  filename = 'Amphistomy_Pairs.png', 
-  plot = amphistomy_pair_plots,
-  device = 'png',
-  path = './Results/Figures/',
-  scale = 1,
-  width = 6,
-  height = 6,
-  bg = 'white'
-)
 
 # Read in stomatal size data
 stom_size <- read.csv("./Data/stomata_lengths_leaf_surface_data.csv")
@@ -351,7 +313,6 @@ stom_all %>% ggplot() +
     axis.text = element_text(size=12),
     axis.title = element_text(size=14),
   )
-
 
 
 # plot abaxial stomatal length as function of ecotype
@@ -442,9 +403,9 @@ stom_all %>% ggplot() +
 # subset dataframe for each population pair
 oae_bhe <- stom_all[which(stom_all$pop_code == "BHE" | stom_all$pop_code == "OAE"),]
 tor_pgr <- stom_all[which(stom_all$pop_code == "PGR" | stom_all$pop_code == "TOR"),]
-lmc_swb <- stom_all[which(stom_all$pop_code == "LMC" | stom_all$pop_code == "SWB"),]
-rgr_opb <- stom_all[which(stom_all$pop_code == "RGR" | stom_all$pop_code == "OPB"),]
-swc_hec <- stom_all[which(stom_all$pop_code == "SWC" | stom_all$pop_code == "HEC"),]
+lmc_swb <- stom_all[which(stom_all$pop_code == "SWB" | stom_all$pop_code == "LMC"),]
+rgr_opb <- stom_all[which(stom_all$pop_code == "OPB" | stom_all$pop_code == "RGR"),]
+swc_hec <- stom_all[which(stom_all$pop_code == "HEC" | stom_all$pop_code == "SWC"),]
 pairs <- list(swc_hec, rgr_opb, lmc_swb, oae_bhe, tor_pgr)
 plots <- rep(NA, 5)
 for (i in 1:length(pairs)){
@@ -473,7 +434,7 @@ for (i in 1:length(pairs)){
 }
 
 
-plots <- lapply(pairs, plot_each_pair, "stomata_count_ad")
+plots <- lapply(pairs, plot_each_pair, "stom_density_ad", "Stomatal density (stomata/mm^2")
 ad_pair_plots <- ggarrange(plotlist=plots, ncol=2, nrow=3)
 ggsave(
   filename = 'Ad_Stomata_Pairs.png', 
@@ -527,6 +488,11 @@ coefficients(m_nest)
 
 # adaxial stomatal length
 m_nest <- aov(data=stom_all, stomate_size_ad ~ ecotype/pop_code)
+summary(m_nest)
+coefficients(m_nest)
+
+# amphistomy
+m_nest <- aov(data=stom_all, amphistomy ~ ecotype/pop_code)
 summary(m_nest)
 coefficients(m_nest)
 
