@@ -205,19 +205,6 @@ t.test(data=stomata, stomata_count_ab ~ ecotype)
 t.test(data=stomata, amphistomy ~ ecotype)
 
 
-
-
-ggsave(
-  filename = 'Ad_Stomata_Ecotype.png', 
-  plot = stomata_ad_boxplot,
-  device = 'png',
-  path = './Results/Figures/',
-  scale = 1,
-  width = 3,
-  height = 6,
-  bg = 'white'
-)
-
 ggsave(
   filename = 'Amphistomy_Ecotype.png', 
   plot = amphistomy_boxplot,
@@ -361,6 +348,65 @@ stom_all$stom_density_ab <- stom_all$stomata_count_ab/0.94372
 # Estimate fraction of leaf epidermal area allocated to stomata following Muir et al. 2023 Am Nat.
 stom_all$stom_ad_fraction <- stom_all$stom_density_ad * stom_all$stomate_area_ad
 stom_all$stom_ab_fraction <- stom_all$stom_density_ab * stom_all$stomate_area_ab
+
+# plot stomatal density as a function of ecotype
+ad_stom_density_ecotype_boxplot <- stom_all %>% ggplot() +
+  aes(x = ecotype, fill = ecotype, y = stom_density_ad) +
+  geom_boxplot(outliers = F) +
+  geom_jitter(position=position_jitter(0.1)) +
+  # Labels
+  scale_x_discrete(name = 'Ecotype') +
+  scale_y_continuous(
+    name = 'Adaxial stomatal density (stomata/mm^2)', 
+  ) +
+  # Style
+  scale_fill_manual(values = c('#514663', '#cacf85')) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text = element_text(size=12),
+    axis.title = element_text(size=14),
+  )
+
+ab_stom_density_ecotype_boxplot <- stom_all %>% ggplot() +
+  aes(x = ecotype, fill = ecotype, y = stom_density_ab) +
+  geom_boxplot(outliers = F) +
+  geom_jitter(position=position_jitter(0.1)) +
+  # Labels
+  scale_x_discrete(name = 'Ecotype') +
+  scale_y_continuous(
+    name = 'Abaxial stomatal density (stomata/mm^2)', 
+  ) +
+  # Style
+  scale_fill_manual(values = c('#514663', '#cacf85')) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text = element_text(size=12),
+    axis.title = element_text(size=14),
+  )
+
+ggsave(
+  filename = 'Ad_Stomata_Ecotype.png', 
+  plot = ad_stom_density_ecotype_boxplot,
+  device = 'png',
+  path = './Results/Figures/',
+  scale = 1,
+  width = 3,
+  height = 6,
+  bg = 'white'
+)
+
+ggsave(
+  filename = 'Ab_Stomata_Ecotype.png', 
+  plot = ab_stom_density_ecotype_boxplot,
+  device = 'png',
+  path = './Results/Figures/',
+  scale = 1,
+  width = 3,
+  height = 6,
+  bg = 'white'
+)
 
 # plot fraction of epidermis dedicated to stomata as a function of ecotype
 stom_all %>% ggplot() +
