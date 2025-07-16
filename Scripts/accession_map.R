@@ -11,6 +11,7 @@ require(raster)
 require(rgdal)
 require(dismo)
 require(maps)
+require(ggrepel)
 
 # Read in Mimulus collection data and pull coordinates for relevant accessions
 
@@ -36,11 +37,6 @@ dat$ecotype <- case_when(dat$pop_code %in% coastal_pops ~ "coastal",
 range(dat$Latitude)
 range(dat$Longitude)
 
-base = get_map(location=c(-125,33,-115,47), zoom=8, maptype="alidade_smooth")
-base = get_map(location=c(-125,33,-115,47), zoom=8, maptype="outdoors")
-base = get_map(location=c(-125,33,-115,47), zoom=8, 
-               maptype="stamen_terrain_background", color="bw")
-
 us_states <- map_data("state")
 ca_or_nv_wa <- us_states[which(us_states$region %in% c("california","oregon", "nevada", "washington")),]
 
@@ -56,8 +52,19 @@ base <- ggplot(data = ca_or_nv_wa,
         panel.border=element_blank(),
         panel.grid=element_line(colour = "lightsteelblue2"))
 
-points_map <- base + geom_point(data=dat, aes(x=dat$Longitude, y=dat$Latitude, fill = dat$ecotype), inherit.aes = FALSE, cex=3, pch=21)+
-  scale_fill_manual(values = c('#514663', '#cacf85'))
+dat$adjust <- case_when(dat$ecotype=="coastal" ~ -1.5,
+                        dat$ecotype=="inland" ~ 1.5)
+
+points_map <- base + geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = ecotype, shape = ecotype), inherit.aes = FALSE, cex=5)+
+  scale_fill_manual(values = c('#514663', '#cacf85'), name=NULL)+
+  scale_shape_manual(values = c(21,24), labels=c("Coastal", "Inland"), name=NULL) # define shape/color scales
+
+points_map <- base +
+  geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = ecotype, shape = ecotype), inherit.aes = FALSE, cex=5)+
+  geom_text_repel(data= dat,aes(x=Longitude, y=Latitude, label=pop_code), nudge_x=dat$adjust, fontface = "bold", segment.color = 'transparent', size=4.5, inherit.aes = FALSE) +
+  scale_fill_manual(values = c('#514663', '#cacf85'), name=NULL)+
+  scale_shape_manual(values = c(21,24), labels=c("Coastal", "Inland"), name=NULL) # define shape/color scales
+
 
 ggsave(
   filename = 'Leaf_surface_accession_map.png', 
