@@ -52,25 +52,22 @@ base <- ggplot(data = ca_or_nv_wa,
         panel.border=element_blank(),
         panel.grid=element_line(colour = "lightsteelblue2"))
 
-dat$adjust <- case_when(dat$ecotype=="coastal" ~ -1.5,
-                        dat$ecotype=="inland" ~ 1.5)
+dat$adjust <- case_when(dat$ecotype=="coastal" ~ -1.2,
+                        dat$ecotype=="inland" ~ 1.2)
 
-points_map <- base + geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = ecotype, shape = ecotype), inherit.aes = FALSE, cex=5)+
-  scale_fill_manual(values = c('#514663', '#cacf85'), name=NULL)+
-  scale_shape_manual(values = c(21,24), labels=c("Coastal", "Inland"), name=NULL) # define shape/color scales
+shapes <- as.integer(c(21, 22, 25, 21, 23, 24, 23, 25, 22, 24))
 
 points_map <- base +
-  geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = ecotype, shape = ecotype), inherit.aes = FALSE, cex=5)+
+  geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = ecotype), color = "black", shape = shapes, inherit.aes = FALSE, cex=5)+
   geom_text_repel(data= dat,aes(x=Longitude, y=Latitude, label=pop_code), nudge_x=dat$adjust, fontface = "bold", segment.color = 'transparent', size=4.5, inherit.aes = FALSE) +
-  scale_fill_manual(values = c('#514663', '#cacf85'), name=NULL)+
-  scale_shape_manual(values = c(21,24), labels=c("Coastal", "Inland"), name=NULL) # define shape/color scales
-
+  scale_fill_manual(values = c('#514663', '#cacf85'), labels=c("Coastal", "Inland"), name=NULL)+
+  scale_color_manual("black", "black", name=NULL)
 
 ggsave(
-  filename = 'Leaf_surface_accession_map.png', 
+  filename = 'Leaf_surface_accession_map.svg', 
   plot = points_map,
-  device = 'png',
-  path = './Results/Figures/',
+  device = 'svg',
+  path = './Results/Figures/SVGs_for_MS/',
   scale = 1,
   bg = 'white'
 )

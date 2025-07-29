@@ -34,12 +34,15 @@ hist(dat$est_start)
 dat_nona <- filter(dat, !is.na(est_start))
 table(dat_nona$pop, dat_nona$treatment) # 6-10 disks of each accession on each treatment.
 
+# make treatment lowercase
+dat$trt <- str_to_lower(dat$trt)
+
 # indicate combinations of ecotype and treatment for easy plotting
-dat$eco_trt <- paste(dat$ecotype, str_to_lower(dat$treatment), sep=" ")
+dat$eco_trt <- paste(dat$ecotype, dat$trt, sep=" ")
 
 lab <- as.data.frame(rbind(label=c("a","b","c","d"),
-                           y=c(13,13,13,13),
-                           )
+                           y=c(13,13,13,13)
+                           ))
   
 dat %>% ggplot() +
   aes(x = eco_trt, fill = eco_trt, y = est_start,) +
@@ -872,9 +875,13 @@ library(ggplot2)
 
 View(tor)
 
-m_nest <- aov(data=dat, est_start ~ treatment * ecotype/pop)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_start <- aov(data=dat, est_start ~ trt * ecotype/pop)
+summary(m_nest_start)
+coefficients(m_nest_start)
+
+m_nest_full <- aov(data=dat, est_full ~ trt * ecotype/pop)
+summary(m_nest_full)
+coefficients(m_nest_full)
 
 # Residual diagnostics to see if data meet assumptions
 res.vals <- resid(m_nest)
@@ -888,8 +895,29 @@ abline(h = 0)
 qqnorm(res.vals, pch = 19)
 qqline(res.vals, col = 'red')
 
+# Plot LSM times to start of necrosis
+
+shapes <- rep(c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24), 2)
+
+lsms <- emmip(m_nest_start, pop ~ ecotype*treatment,CIs=TRUE, plotit=FALSE)
+
+lsms$color <- ifelse(lsms$ecotype == "coastal", '#514663', '#cacf85')
+
+start_plot <- emmip(m_nest_start, pop ~ ecotype*trt,CIs=TRUE, col = lsms$color,
+                dotarg = list(shape = shapes, cex = 5, col="black",
+                              fill = lsms$color), 
+                linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Days to start of necrosis') + xlab("Media and Ecotype") +
+  theme(axis.text = element_text(size = 12))+
+  scale_x_discrete(limits = c("coastal control", "coastal salt", "inland control", "inland salt"))
 
 
-
+full_plot <- emmip(m_nest_full, pop ~ ecotype*trt,CIs=TRUE, col = lsms$color,
+                    dotarg = list(shape = shapes, cex = 5, col="black",
+                                  fill = lsms$color), 
+                    linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Days to full necrosis') + xlab("Media and Ecotype") +
+  theme(axis.text = element_text(size = 12))+
+  scale_x_discrete(limits = c("coastal control", "coastal salt", "inland control", "inland salt"))
 
 

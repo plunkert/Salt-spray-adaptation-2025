@@ -36,8 +36,6 @@ stomata =  read_excel('./Data/stomatal density data.xlsx') %>%
     amphistomy = stomata_count_ad / stomata_count_ab 
   )
   
-View(stomata)
-
 table(as.factor(stomata$pop_code))
 
 # Add salt exposure columns
@@ -537,49 +535,113 @@ ggsave(
 # stomatal size, and fraction of epidermis allocated to stomata.
 
 # adaxial stomatal density
-m_nest <- aov(data=stom_all, stom_density_ad ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_ad_dens <- aov(data=stom_all, stom_density_ad ~ ecotype/pop_code)
+summary(m_nest_ad_dens)
+coefficients(m_nest_ad_dens)
 
 # abaxial stomatal density
-m_nest <- aov(data=stom_all, stom_density_ab ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
-
-#contrasts(stom_all$pop_code) <- mat
-
+m_nest_ab_dens <- aov(data=stom_all, stom_density_ab ~ ecotype/pop_code)
+summary(m_nest_ab_dens)
+coefficients(m_nest_ab_dens)
 
 # adaxial stomatal length
-m_nest <- aov(data=stom_all, stomate_size_ad ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
-
-# amphistomy
-m_nest <- aov(data=stom_all, amphistomy ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_ad_length <- aov(data=stom_all, stomate_size_ad ~ ecotype/pop_code)
+summary(m_nest_ad_length)
+coefficients(m_nest_ad_length)
 
 # abaxial stomatal length
-m_nest <- aov(data=stom_all, stomate_size_ab ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_ab_length <- aov(data=stom_all, stomate_size_ab ~ ecotype/pop_code)
+summary(m_nest_ab_length)
+coefficients(m_nest_ab_length)
+
+# amphistomy
+m_nest_amph <- aov(data=stom_all, amphistomy ~ ecotype/pop_code)
+summary(m_nest_amph)
+coefficients(m_nest_amph)
 
 # adaxial area allocated to stomata
-m_nest <- aov(data=stom_all, stom_ad_fraction ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_ad_frac <- aov(data=stom_all, stom_ad_fraction ~ ecotype/pop_code)
+summary(m_nest_ad_frac)
+coefficients(m_nest_ad_frac)
 
-m_nest <- aov(data=stom_all, stom_ab_fraction ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+# abaxial area allocated to stomata
+m_nest_ab_frac <- aov(data=stom_all, stom_ab_fraction ~ ecotype/pop_code)
+summary(m_nest_ab_frac)
+coefficients(m_nest_ab_frac)
+
+# Make ecotype plots showing only LSMs from nested ANOVA
+
+# Indicate which pairs are which based on point shape
+shapes <- c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24)
+
+ad_dens_plot <- emmip(m_nest_ad_dens, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                        dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                      fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Stomatal Density (mm^-2)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) 
+
+
+ad_length_plot <- emmip(m_nest_ad_length, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                      dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                    fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Stomatal Length (um)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) 
+
+ad_frac_plot <- emmip(m_nest_ad_frac, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                        dotarg = list(shape = shapes, cex = 5, col="black",
+                                      fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge=0.4) +
+  ylab('Stomatal Area / Epidermis Area') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12))
+
+ad_gsw_plot <- emmip(m_nest_gsw, pop ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                     dotarg = list(shape = shapes, cex = 5, col="black",
+                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('gsw (umol m^-2 s^-1)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12))
+
+amph_plot <- emmip(m_nest_amph, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                     dotarg = list(shape = shapes, cex = 5, col="black",
+                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Amphistomy (adaxial/abaxial)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12))
+
+ggsave(ggarrange(ad_dens_plot, ad_length_plot, ad_frac_plot, 
+                 ad_gsw_plot, amph_plot, nrow=2, ncol=3), 
+       filename = "stomatal_figs_lsms_ecotype.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 10, height = 7, units = "in")
+
+# Let's make a comparable supplemental figure for abaxial traits
+ab_dens_plot <- emmip(m_nest_ab_dens, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                      dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                    fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Stomatal Density (mm^-2)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) 
+
+
+ab_length_plot <- emmip(m_nest_ab_length, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                        dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                      fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Stomatal Length (um)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) 
+
+ab_frac_plot <- emmip(m_nest_ab_frac, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                      dotarg = list(shape = shapes, cex = 5, col="black",
+                                    fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge=0.4) +
+  ylab('Stomatal Area / Epidermis Area') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12))
+
+ggsave(ggarrange(ab_dens_plot, ab_length_plot, ab_frac_plot, 
+                nrow=1, ncol=3), 
+       filename = "stomatal_figs_abaxial_lsms_ecotype.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 10, height = 3.5, units = "in")
+
 
 # check for differences between population pairs
-m <- glmmTMB(stom_density_ad ~ ecotype * pair, family = "gaussian", data = stom_all)
-
-summary(m)
-
-eg <- emmeans(m, specs = "pop_code")
-
+#m <- glmmTMB(stom_density_ad ~ ecotype * pair, family = "gaussian", data = stom_all)
+#summary(m)
+#eg <- emmeans(m, specs = "pop_code")
 
 # try Tukey as a post-hoc test. Use only pop code bc including ecotype causes
 # it to make up groups that don't exist, like inland OPB
@@ -590,6 +652,7 @@ TukeyHSD(m)
 m <- aov(data=stom_all, stomate_size_ad ~ pop_code)
 summary(m)
 TukeyHSD(m)
+
 # difference in stomatal size with coastal < inland for the following pairs:
 # SWC/HEC (p=0.0030098), TOR/PGR (p=0.0253589), 
 # not: OAE/BHE (p=1), OPB/RGR (other direction, p=0.0860436), SWB/LMC (p=0.9996284)
@@ -707,4 +770,130 @@ m <- lm(gsw ~ pop, data=baseline)
 summary(m)
 m.emm <- emmeans(m, ~ pop)
 contrast(m.emm, method=list(mat), adjust='bh')
+
+########### Let's make tables!!! ###############
+# Make ANOVA tables for stomatal traits!
+
+library(kableExtra)
+
+# tell kable not to plot NAs
+options(knitr.kable.NA = '')
+
+# make vector of sources of variation
+sov <- c("Ecotype", "Accession (Ecotype)", "Error")
+
+# make vector to describe what effect sizes indicate
+effect_meaning <- c("Inland", "", "")
+
+# vector of main and nested effects for adaxial stomatal density
+effects <- c(as.numeric(m_nest_ad_dens$coefficients[2]), "", "")
+anova_ad_dens_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ad_dens)$Df, anova(m_nest_ad_dens)$F, anova(m_nest_ad_dens)$`Pr(>F)`))
+colnames(anova_ad_dens_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# adaxial stomatal density table!
+anova_ad_dens_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                         F = round(as.numeric(F), 2),
+                         `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                               .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Adaxial Stomatal Density") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ad_dens_tbl$`p-value`) < 0.05), bold=T)
+
+# vector of main and nested effects for adaxial stomatal length
+effects <- c(as.numeric(m_nest_ad_length$coefficients[2]), "", "")
+anova_ad_length_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ad_length)$Df, anova(m_nest_ad_length)$F, anova(m_nest_ad_length)$`Pr(>F)`))
+colnames(anova_ad_length_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# make adaxial stomatal length table!
+anova_ad_length_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                             F = round(as.numeric(F), 2),
+                             `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                   .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Adaxial Stomatal Length") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ad_dens_tbl$`p-value`) < 0.05), bold=T)
+
+# vector of main and nested effects for fraction of epidermis area allocated to stomata
+effects <- c(as.numeric(m_nest_ad_frac$coefficients[2]), "", "")
+anova_ad_frac_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ad_frac)$Df, anova(m_nest_ad_frac)$F, anova(m_nest_ad_frac)$`Pr(>F)`))
+colnames(anova_ad_frac_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# make adaxial stomatal fraction table!
+anova_ad_frac_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                               F = round(as.numeric(F), 2),
+                               `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                     .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Fraction of Adaxial Epidermis Area Allocated to Stomata") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ad_dens_tbl$`p-value`) < 0.05), bold=T)
+
+
+# gsw table
+
+# vector of main and nested effects for gsw
+effects <- c(as.numeric(m_nest_gsw$coefficients[2]), "", "")
+anova_gsw_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_gsw)$Df, anova(m_nest_gsw)$F, anova(m_nest_gsw)$`Pr(>F)`))
+colnames(anova_gsw_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# make adaxial stomatal fraction table!
+anova_gsw_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                             F = round(as.numeric(F), 2),
+                             `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                   .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Adaxial Stomatal Conductance") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ad_dens_tbl$`p-value`) < 0.05), bold=T)
+
+# amphistomy table
+# vector of main and nested effects for amphistomy
+effects <- c(as.numeric(m_nest_amph$coefficients[2]), "", "")
+anova_amph_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_amph)$Df, anova(m_nest_amph)$F, anova(m_nest_amph)$`Pr(>F)`))
+colnames(anova_amph_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# adaxial stomatal density table!
+anova_amph_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                             F = round(as.numeric(F), 2),
+                             `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                   .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Amphistomy") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ad_dens_tbl$`p-value`) < 0.05), bold=T)
+
+
+# Supplemental ANOVA table for abaxial stomatal traits 
+
+# vector of main and nested effects for adaxial stomatal density
+effects <- c(as.numeric(m_nest_ab_dens$coefficients[2]), "", "")
+anova_ab_dens_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ab_dens)$Df, anova(m_nest_ab_dens)$F, anova(m_nest_ab_dens)$`Pr(>F)`))
+colnames(anova_ab_dens_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# abaxial stomatal density table!
+anova_ab_dens_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                             F = round(as.numeric(F), 2),
+                             `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                   .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Abaxial Stomatal Density") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ab_dens_tbl$`p-value`) < 0.05), bold=T)
+
+# vector of main and nested effects for adaxial stomatal length
+effects <- c(as.numeric(m_nest_ab_length$coefficients[2]), "", "")
+anova_ab_length_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ab_length)$Df, anova(m_nest_ab_length)$F, anova(m_nest_ab_length)$`Pr(>F)`))
+colnames(anova_ab_length_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# make adaxial stomatal length table!
+anova_ab_length_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                               F = round(as.numeric(F), 2),
+                               `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                     .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Abaxial Stomatal Length") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ab_dens_tbl$`p-value`) < 0.05), bold=T)
+
+# vector of main and nested effects for fraction of epidermis area allocated to stomata
+effects <- c(as.numeric(m_nest_ab_frac$coefficients[2]), "", "")
+anova_ab_frac_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ab_frac)$Df, anova(m_nest_ab_frac)$F, anova(m_nest_ab_frac)$`Pr(>F)`))
+colnames(anova_ab_frac_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# make abaxial stomatal fraction table!
+anova_ab_frac_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                             F = round(as.numeric(F), 2),
+                             `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                   .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Fraction of Abaxial Epidermis Area Allocated to Stomata") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ab_dens_tbl$`p-value`) < 0.05), bold=T)
+
 

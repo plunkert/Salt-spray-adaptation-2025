@@ -52,7 +52,7 @@ dat$replicate <- substr(dat$leaf_id, 6, 1000000L)
 dat$mpaes_g <- as.numeric(dat$mpaes_g)
 
 # get LMA and succulence
-dat$lma <- dat$dry_weight_g/dat$area_cm2
+dat$lma <- dat$dry_weight_g*10000/dat$area_cm2 # convert to g/m^2
 dat$succulence <- (dat$fresh_weight_g - dat$dry_weight_g)/dat$area_cm2
 
 # let's see if succulence is affected by salt treatment!
@@ -193,6 +193,9 @@ m_nest <- aov(data=dat, dry_weight_g ~ treatment * ecotype/pop_code)
 summary(m_nest)
 m_nest <- aov(data=dat, area_cm2 ~ treatment * ecotype/pop_code)
 summary(m_nest)
+
+# how you'd fit a model with random effects
+#lme(dat, concentration ~ treatment * ecotype + (1|pop_code))
 
 # check for effect of latitudinal pair following Sylvie's advice
 #library(glmmTMB)
@@ -351,7 +354,7 @@ mpaes_samples_mass %>%
     name = 'Concentration of Na (M)')+
   # Style
   scale_fill_manual(values = c('cyan3', 'yellow', "salmon")) +
-  theme_minimal() + ggtitle("HEC") +
+  theme_minimal() + ggtitle("Test for Efficacy of Rinsing Surface Salt in HEC Leaves") +
   theme(
     legend.position = "none",
     axis.text = element_text(size=12),
@@ -373,11 +376,43 @@ mpaes_Na <- mpaes_samples_mass[which(mpaes_samples_mass$element_label == "Na"),]
 # test whether treatment and ecotype interactively affect succulence
 
 # can I model effect of treatment * (pop code nested w/in ecotype)?
-m_nest_suc <- aov(data=mpaes_Na, succulence ~ treatment * ecotype/pop_code)
+m_nest_suc <- aov(data=mpaes_Na, succulence ~  treatment * ecotype/pop_code)
 summary(m_nest_suc)
 coefficients(m_nest_suc)
 
-emmeans::emmeans(model_object, specs = "signals") %>% pairs()
+# Let's try a plot showing LSMs
+shapes <- rep(c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24), 2)
+
+lsms <- emmip(m_nest_suc, pop_code ~ ecotype*treatment,CIs=TRUE, plotit=FALSE)
+
+lsms$color <- ifelse(lsms$ecotype == "coastal", '#514663', '#cacf85')
+
+succulence_plot <- emmip(m_nest_suc, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                         dotarg = list(shape = shapes, cex = 5, col="black",
+                                       fill = lsms$color), 
+                        linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Succulence (g H2O / cm^2)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
+
+
+m_nest_lma <- aov(data=mpaes_Na, lma ~ treatment * ecotype/pop_code)
+summary(m_nest_lma)
+coefficients(m_nest_lma)
+
+lma_lsm_plot <- emmip(m_nest_lma, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                         dotarg = list(shape = shapes, cex = 5, col="black",
+                                       fill = lsms$color), 
+                         linearg = list(linetype="solid", col="black"), type = "response", plotit = T, dodge = 0.4) +
+  ylab('LMA (g/m^2)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
+
+ggsave(lma_lsm_plot, 
+       filename = "lma_lsm_ecotype_salt.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 4, height = 3.5, units = "in")
+
 
 # Plot Na for each ecotype and treatment combination
 M <- mpaes_Na %>% ggplot() +
@@ -397,10 +432,29 @@ M <- mpaes_Na %>% ggplot() +
     axis.title = element_text(size=16),
   )
 
+# plot 
+
+# Plot LSMs for each accession in salt and water
+lma_plot <- emmip(m_nest_lma, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                  dotarg = list(shape = shapes, cex = 5, col="black",
+                                fill = lsms$color), 
+                  linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Succulence (g H2O / cm^2)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
+
 # test for statistical interaction!!
 
 m_nest_M <- aov(data=mpaes_Na, molarity ~ treatment * ecotype/pop_code)
 summary(m_nest_M)
+
+M_plot <- emmip(m_nest_M, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                         dotarg = list(shape = shapes, cex = 5, col="black",
+                                       fill = lsms$color), 
+                         linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Concentration of Na (M)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
 
 
 # But coastals are also waterier, which would reduce Na concentration.
@@ -428,6 +482,21 @@ umol <- mpaes_Na %>% ggplot() +
 
 m_nest_umol <- aov(data=mpaes_Na, umol_per_area ~ treatment * ecotype/pop_code)
 summary(m_nest_umol)
+
+umol_plot <- emmip(m_nest_umol, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                dotarg = list(shape = shapes, cex = 5, col="black",
+                              fill = lsms$color), 
+                linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('umol Na per cm^2 leaf') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
+
+ggsave(ggarrange(M_plot, umol_plot, succulence_plot, 
+                 nrow=1, ncol=3), 
+       filename = "salt_response_lsms_ecotype.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 10, height = 3.5, units = "in")
+
 
 # perform t-tests to see if differences in salt spray exclusion as umol per unit leaf area
 # are consistent among pairs of populations

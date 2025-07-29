@@ -6,7 +6,7 @@ require(tidyverse)
 require(readxl)
 require(ggpubr)
 require(readxl)
-
+require(emmeans)
 
 # Read leaf area data into R
 area <- read_excel("./Data/leaf_area_data.xlsx", sheet="Sheet1")
@@ -98,11 +98,51 @@ summary(lm(data=dat_area, succulence ~ ecotype))
 summary(lm(data=dat_area, dunk_result ~ ecotype))
 
 # Fit nested anovas for dunk assay and succulence
-m_nest <- aov(data=dat_area, dunk_result ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_dunk <- aov(data=dat_area, dunk_result ~ ecotype/pop_code)
+summary(m_nest_dunk)
+coefficients(m_nest_dunk)
 
-m_nest <- aov(data=dat_area, succulence ~ ecotype/pop_code)
-summary(m_nest)
-coefficients(m_nest)
+m_nest_succ <- aov(data=dat_area, succulence ~ ecotype/pop_code)
+summary(m_nest_succ)
+efficients(m_nest_succ)
+
+# Plot LSM for dunk assay
+
+dunk_plot <- emmip(m_nest_dunk, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                         dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                       fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Submergence Assay (g H2O / cm^2)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) 
+
+# Plot LSM for succulence
+succ_plot <- emmip(m_nest_succ, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                   dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                 fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Succulence (g H2O / cm^2)') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) 
+
+# Make table for dunk assay
+library(kableExtra)
+
+# tell kable not to plot NAs
+options(knitr.kable.NA = '')
+
+# make vector of sources of variation
+sov <- c("Ecotype", "Accession (Ecotype)", "Error")
+
+# make vector to describe what effect sizes indicate
+effect_meaning <- c("Inland", "", "")
+
+# vector of main and nested effects for adaxial contact angle
+effects <- c(as.numeric(m_nest_dunk$coefficients[2]), "", "")
+anova_dunk_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_dunk)$Df, anova(m_nest_dunk)$F, anova(m_nest_dunk)$`Pr(>F)`))
+colnames(anova_dunk_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# adaxial contact angle density table!
+anova_dunk_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                              F = round(as.numeric(F), 2),
+                              `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                    .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Submergence Assay") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_dunk_tbl$`p-value`) < 0.05), bold=T)
 

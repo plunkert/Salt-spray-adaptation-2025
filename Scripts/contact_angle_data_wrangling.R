@@ -4,6 +4,7 @@ require(readxl)
 coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
 inland_pops = c('SWC', 'LMC', 'TOR', 'OAE', 'RGR')
 
+setwd("~/Documents/GitHub/Leaf-surface-traits-2024/") # change this
 
 contact_angle =  read_xlsx(
   path = './Data/Contact Angle Measurements.xlsx', # Change path here
@@ -161,7 +162,6 @@ summary(m_nest_ad)
 coefficients(m_nest_ad)
 
 m_nest_ab <- aov(data=contact_angle, contact_angle_ab ~ ecotype/pop.code)
-
 summary(m_nest_ab)
 coefficients(m_nest_ab)
 
@@ -226,4 +226,69 @@ ggsave(
   height = 6,
   bg = 'white'
 )
+
+# Nested ANOVA table for contact angle
+
+library(kableExtra)
+
+# tell kable not to plot NAs
+options(knitr.kable.NA = '')
+
+# make vector of sources of variation
+sov <- c("Ecotype", "Accession (Ecotype)", "Error")
+
+# make vector to describe what effect sizes indicate
+effect_meaning <- c("Inland", "", "")
+
+# vector of main and nested effects for adaxial contact angle
+effects <- c(as.numeric(m_nest_ad$coefficients[2]), "", "")
+anova_ad_angle_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ad)$Df, anova(m_nest_ad)$F, anova(m_nest_ad)$`Pr(>F)`))
+colnames(anova_ad_angle_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# adaxial contact angle density table!
+anova_ad_angle_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                             F = round(as.numeric(F), 2),
+                             `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                   .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Adaxial Contact Angle") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ad_angle_tbl$`p-value`) < 0.05), bold=T)
+
+# vector of main and nested effects for abaxial contact angle
+effects <- c(as.numeric(m_nest_ab$coefficients[2]), "", "")
+anova_ab_angle_tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(m_nest_ab)$Df, anova(m_nest_ab)$F, anova(m_nest_ab)$`Pr(>F)`))
+colnames(anova_ab_angle_tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
+
+# adaxial contact angle density table!
+anova_ab_angle_tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+                              F = round(as.numeric(F), 2),
+                              `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
+                                                    .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+  kbl(caption = "Abaxial Contact Angle") %>% kable_classic() %>% 
+  row_spec(which(as.numeric(anova_ab_angle_tbl$`p-value`) < 0.05), bold=T)
+
+
+# Plot showing LSMs of contact angle for each accession
+
+shapes <- c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24)
+
+ad_contact_plot <- emmip(m_nest_ad, pop.code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                      dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                    fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Adaxial Contact Angle') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  ylim(53,80)
+
+ab_contact_plot <- emmip(m_nest_ab, pop.code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
+                         dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                       fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Abaxial Contact Angle') + xlab("Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  ylim(53,80)
+
+# dunk plot is loaded into R enviro from succulence_dunk_area_wrangling.R script (fix this!)
+ggsave(ggarrange(ad_contact_plot, ab_contact_plot, dunk_plot, 
+                 nrow=1, ncol=3), 
+       filename = "hydrophobicity_lsms_ecotype.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 10, height = 3.5, units = "in")
 
