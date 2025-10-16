@@ -1,4 +1,7 @@
-# Leaf surface trait analysis
+# Analysis of stomatal traits from coastal and inland accessions in a common garden.
+# This script wrangles and cleans data, performs calculations related to stomatal 
+# allocation and leaf water droplet adhesion assay, fits nested ANOVAs for the differences 
+# between ecotypes in leaf surface traits, and produces figures and tables describing these results.
 
 # The leaf surface trait analysis is floating between many different scripts, leading
 # to repetitive code across scripts. Consolidating into a single analysis for all 
@@ -11,6 +14,7 @@ require(emmeans)
 require(ggplot2)
 require(dplyr)
 require(kableExtra)
+require(webshot2)
 
 # Which accession numbers are coastal and inland?
 coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
@@ -39,7 +43,7 @@ contact_angle =  read_xlsx(
 
 # Read in stomatal count data
 
-stomata_counts <-  read_excel('./Data/stomatal density data.xlsx') %>%
+stomata_counts <-  read_excel('./Data/stomatal density data.xlsx', sheet="Sheet1") %>%
   # Remove missing data
   filter(!is.na(stomata_count)) %>% 
   # Separate file_name column
@@ -75,12 +79,12 @@ stomata_counts <-  read_excel('./Data/stomatal density data.xlsx') %>%
 
 # Read in stomatal size data
 
-stom_size <- read.csv("./Data/stomata_lengths_leaf_surface_data.csv")
+stom_size <- read_excel('./Data/stomata_lengths_leaf_surface_data.xlsx', sheet="Sheet1")
 stom_size$file_name[stom_size$file_name == ""] <- NA
 stom_size <- stom_size %>% fill(file_name) %>%
   mutate(
     stomate_length_um = as.numeric(stomate_length_um)
-  ) %>% na.omit() %>%
+  ) %>%
   separate(
     col = file_name,
     sep = '_',
@@ -110,14 +114,13 @@ stom_all$stom_ad_fraction <- stom_all$stom_density_ad * stom_all$stomate_area_ad
 stom_all$stom_ab_fraction <- stom_all$stom_density_ab * stom_all$stomate_area_ab
 
 # Read in stomatal conductance (gsw) data. Adaxial only.
-# Salt/water in id column is not meaningful because we're only including before-treatment measurements
-gsw <- read.csv("./Data/stomatal_conductance_data/processed_baseline_gsw.csv")
+gsw <- read_excel("./Data/processed_baseline_gsw.xlsx")
 
 # Read in leaf area data into R
 area <- read_excel("./Data/leaf_area_data.xlsx", sheet="Sheet1")
 area$pop_code <- as.factor(area$pop_code)
 
-# Read other leaf surface data (leaf mass, dunk assay, etc) into R
+# Read other leaf surface data (leaf mass, leaf water drop adhesion assay, etc) into R
 dat <- read_excel("./Data/leaf_surface_data.xlsx", sheet="Sheet1")
 colnames(dat)[1] <- "pop_code"
 # Merge with area (effectively, add area column to larger dataframe)

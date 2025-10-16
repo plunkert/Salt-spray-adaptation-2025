@@ -35,10 +35,10 @@ dat_nona <- filter(dat, !is.na(est_start))
 table(dat_nona$pop, dat_nona$treatment) # 6-10 disks of each accession on each treatment.
 
 # make treatment lowercase
-dat$trt <- str_to_lower(dat$trt)
+dat$treatment <- str_to_lower(dat$treatment)
 
 # indicate combinations of ecotype and treatment for easy plotting
-dat$eco_trt <- paste(dat$ecotype, dat$trt, sep=" ")
+dat$eco_trt <- paste(dat$ecotype, dat$treatment, sep=" ")
 
 lab <- as.data.frame(rbind(label=c("a","b","c","d"),
                            y=c(13,13,13,13)
@@ -120,87 +120,7 @@ dat %>% ggplot() +
     axis.title = element_text(size=14),
   )
 
-
-
-
-# # Create a data frame directly from the data in the PDF
-# # The data appears to be space-separated
-# data <- data.frame(
-#   pop = c("BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", 
-#           "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE",
-#           "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC",
-#           "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC",
-#           "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB",
-#           "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB",
-#           "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR",
-#           "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR",
-#           "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB",
-#           "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB"),
-#   treatment = c(rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-#                 rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-#                 rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-#                 rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-#                 rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5)),
-#   est_full = c(14, 14, NA, NA, 12, 8, 9, 12, NA, NA,
-#                12, 10, NA, NA, 13, 11, 10, 12, 10, 12,
-#                11, 12, NA, NA, 19, 16, 10, 14, 9, 11,
-#                11, 14, NA, NA, 14, 11, 12, 11, 14, 11,
-#                11, 15, NA, NA, 15, 9, 8, NA, 10, 9,
-#                14, 12, NA, NA, 14, 8, 9, 11, 13, 13,
-#                10, 14, NA, NA, 10, 9, 7, 9, 7, 10,
-#                10, 14, NA, NA, 10, 9, 7, 10, 9, 11,
-#                10, 12, NA, NA, 13, 7, 7, 11, 9, 16,
-#                14, 14, NA, NA, 12, 10, 8, 12, 9, 15),
-#   ecotype = rep("coastal", 100)
-# )
-# 
-# # Alternative approach without using pipes
-# coastal_data <- subset(data, ecotype == "coastal" & !is.na(est_full))
-
-# Create box plots comparing Control vs Salt for coastal ecotype
-# Using est_full (full necrosis) as the y-value
-
-# Create basic boxplot using base R (no pipes required)
-boxplot(est_full ~ treatment, data = coastal_data,
-        main = "Time to Full Necrosis: Control vs Salt (Coastal Ecotype)",
-        xlab = "Treatment",
-        ylab = "Days to Full Necrosis",
-        col = c("lightgreen", "lightblue"))
-
-# If ggplot2 is available, we can use it for a more advanced plot
-if (require(ggplot2)) {
-  # Create a ggplot boxplot
-  p <- ggplot(coastal_data, aes(x = treatment, y = est_full, fill = treatment)) +
-    geom_boxplot() +
-    labs(title = "Time to Full Necrosis: Control vs Salt (Coastal Ecotype)",
-         x = "Treatment",
-         y = "Days to Full Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
   
-  print(p)
-  
-  # Add individual data points with jitter
-  p2 <- ggplot(coastal_data, aes(x = treatment, y = est_full, fill = treatment)) +
-    geom_boxplot(alpha = 0.7) +
-    geom_jitter(width = 0.2, alpha = 0.5) +
-    labs(title = "Time to Full Necrosis: Control vs Salt (Coastal Ecotype)",
-         subtitle = "Individual data points shown with jitter",
-         x = "Treatment",
-         y = "Days to Full Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p2)
-} else {
-  # If ggplot2 isn't available, we'll use a stripchart to show individual points
-  stripchart(est_full ~ treatment, data = coastal_data,
-             vertical = TRUE, method = "jitter",
-             pch = 19, col = "darkgray", add = TRUE)
-}
-
 # Perform statistical analysis of the difference
 # t-test to compare means
 t_test_result <- t.test(est_full ~ treatment, data = coastal_data)
@@ -229,258 +149,6 @@ if (!require(ggplot2)) install.packages("ggplot2")
 # Load the libraries
 library(ggplot2)
 
-# Create a data frame for the inland populations
-data_inland <- data.frame(
-  pop = c("LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", 
-          "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC",
-          "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE",
-          "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE",
-          "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR",
-          "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR",
-          "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC",
-          "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC",
-          "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR",
-          "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR"),
-  treatment = c(rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5)),
-  est_full = c(13, 15, NA, NA, 11, 9, 9, 9, 9, 9,
-               16, 10, NA, NA, 13, 9, 9, 10, 10, NA,
-               12, 12, NA, NA, 14, 10, 10, 10, 10, 9,
-               11, 14, NA, NA, 11, 9, 10, 9, 10, 9,
-               15, 13, NA, NA, 14, 10, 10, 9, 12, 9,
-               15, 16, NA, NA, NA, 9, 9, 8, 10, 11,
-               10, 13, NA, NA, 10, 8, 10, 10, 10, 7,
-               9, 9, NA, NA, 10, 9, 9, 10, 9, 6,
-               16, 14, NA, NA, NA, 10, 17, 10, 12, 14,
-               15, 17, NA, NA, 15, 15, 14, NA, 16, 12),
-  ecotype = rep("inland", 100)
-)
-
-# Filter data to include only inland ecotype and remove NA values in est_full
-inland_data <- subset(data_inland, !is.na(est_full))
-
-# Create basic boxplot using base R (no pipes required)
-boxplot(est_full ~ treatment, data = inland_data,
-        main = "Time to Full Necrosis: Control vs Salt (Inland Ecotype)",
-        xlab = "Treatment",
-        ylab = "Days to Full Necrosis",
-        col = c("lightgreen", "lightblue"))
-
-# If ggplot2 is available, we can use it for a more advanced plot
-if (require(ggplot2)) {
-  # Create a ggplot boxplot
-  p <- ggplot(inland_data, aes(x = treatment, y = est_full, fill = treatment)) +
-    geom_boxplot() +
-    labs(title = "Time to Full Necrosis: Control vs Salt (Inland Ecotype)",
-         x = "Treatment",
-         y = "Days to Full Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p)
-  
-  # Add individual data points with jitter
-  p2 <- ggplot(inland_data, aes(x = treatment, y = est_full, fill = treatment)) +
-    geom_boxplot(alpha = 0.7) +
-    geom_jitter(width = 0.2, alpha = 0.5) +
-    labs(title = "Time to Full Necrosis: Control vs Salt (Inland Ecotype)",
-         subtitle = "Individual data points shown with jitter",
-         x = "Treatment",
-         y = "Days to Full Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p2)
-} else {
-  # If ggplot2 isn't available, we'll use a stripchart to show individual points
-  stripchart(est_full ~ treatment, data = inland_data,
-             vertical = TRUE, method = "jitter",
-             pch = 19, col = "darkgray", add = TRUE)
-}
-
-# Perform statistical analysis of the difference
-# t-test to compare means
-t_test_result <- t.test(est_full ~ treatment, data = inland_data)
-print(t_test_result)
-
-# Calculate summary statistics for each group
-# Using base R instead of dplyr
-control_data <- subset(inland_data, treatment == "Control")
-salt_data <- subset(inland_data, treatment == "Salt")
-
-summary_stats <- data.frame(
-  treatment = c("Control", "Salt"),
-  mean = c(mean(control_data$est_full), mean(salt_data$est_full)),
-  median = c(median(control_data$est_full), median(salt_data$est_full)),
-  min = c(min(control_data$est_full), min(salt_data$est_full)),
-  max = c(max(control_data$est_full), max(salt_data$est_full)),
-  sd = c(sd(control_data$est_full), sd(salt_data$est_full)),
-  n = c(nrow(control_data), nrow(salt_data))
-)
-
-if (!require(dplyr)) install.packages("dplyr")
-if (!require(ggplot2)) install.packages("ggplot2")
-
-# Load the libraries
-library(ggplot2)
-
-# Create a data frame for the inland populations with est_start values
-data_inland <- data.frame(
-  pop = c("LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", 
-          "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC", "LMC",
-          "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE",
-          "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE", "OAE",
-          "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR",
-          "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR", "RGR",
-          "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC",
-          "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC", "SWC",
-          "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR",
-          "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR", "TOR"),
-  treatment = c(rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5)),
-  est_start = c(9, 10, NA, NA, 8, 5, 6, 7, 5, 5,
-                12, 9, NA, NA, 9, 5, 6, 5, 6, NA,
-                10, 9, NA, NA, 11, 7, 7, 6, 7, 6,
-                9, 11, NA, NA, 9, 6, 7, 6, 7, 6,
-                10, 10, NA, NA, 10, 5, 7, 7, 7, 7,
-                10, 9, NA, NA, NA, 6, 5, 5, 8, 7,
-                8, 9, NA, NA, 8, 6, 6, 6, 6, 5,
-                7, 7, NA, NA, 8, 6, 7, 6, 6, 4,
-                13, 11, NA, NA, NA, 7, 9, 6, 7, 8,
-                13, 10, NA, NA, 9, 7, 8, 3, 8, 6),
-  ecotype = rep("inland", 100)
-)
-
-# Filter data to include only inland ecotype and remove NA values in est_start
-inland_data <- subset(data_inland, !is.na(est_start))
-
-# Create basic boxplot using base R
-boxplot(est_start ~ treatment, data = inland_data,
-        main = "Time to Start of Necrosis: Control vs Salt (Inland Ecotype)",
-        xlab = "Treatment",
-        ylab = "Days to Start of Necrosis",
-        col = c("lightgreen", "lightblue"))
-
-# If ggplot2 is available, we can use it for a more advanced plot
-if (require(ggplot2)) {
-  # Create a ggplot boxplot
-  p <- ggplot(inland_data, aes(x = treatment, y = est_start, fill = treatment)) +
-    geom_boxplot() +
-    labs(title = "Time to Start of Necrosis: Control vs Salt (Inland Ecotype)",
-         x = "Treatment",
-         y = "Days to Start of Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p)
-  
-  # Add individual data points with jitter
-  p2 <- ggplot(inland_data, aes(x = treatment, y = est_start, fill = treatment)) +
-    geom_boxplot(alpha = 0.7) +
-    geom_jitter(width = 0.2, alpha = 0.5) +
-    labs(title = "Time to Start of Necrosis: Control vs Salt (Inland Ecotype)",
-         subtitle = "Individual data points shown with jitter",
-         x = "Treatment",
-         y = "Days to Start of Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p2)
-} else {
-  # If ggplot2 isn't available, we'll use a stripchart to show individual points
-  stripchart(est_start ~ treatment, data = inland_data,
-             vertical = TRUE, method = "jitter",
-             pch = 19, col = "darkgray", add = TRUE)
-}
-
-
-
-# Create a data frame for the coastal populations with est_start values
-data_inland <- data.frame(
-  pop = c("BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", 
-          "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE", "BHE",
-          "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC",
-          "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC", "HEC",
-          "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB",
-          "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB", "OPB",
-          "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR",
-          "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR", "PGR",
-          "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB",
-          "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB", "SWB"),
-  treatment = c(rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5),
-                rep("Control", 5), rep("Salt", 5), rep("Control", 5), rep("Salt", 5)),
-  est_full = c(14, 14, NA, NA, 12, 8, 9, 12, NA, NA,
-               12, 10, NA, NA, 13, 11, 10, 12, 10, 12,
-               11, 12, NA, NA, 19, 16, 10, 14, 9, 11,
-               11, 14, NA, NA, 14, 11, 12, 11, 14, 11,
-               11, 15, NA, NA, 15, 9, 8, NA, 10, 9,
-               14, 12, NA, NA, 14, 8, 9, 11, 13, 13,
-               10, 14, NA, NA, 10, 9, 7, 9, 7, 10,
-               10, 14, NA, NA, 10, 9, 7, 10, 9, 11,
-               10, 12, NA, NA, 13, 7, 7, 11, 9, 16,
-               14, 14, NA, NA, 12, 10, 8, 12, 9, 15),
-  ecotype = rep("coastal", 100)
-)
-# Alternative approach without using pipes
-coastal_data <- subset(data, ecotype == "coastal" & !is.na(est_start))
-
-# Create box plots comparing Control vs Salt for coastal ecotype
-# Using est_start (start of necrosis) as the y-value
-
-# Create basic boxplot using base R (no pipes required)
-boxplot(est_start ~ treatment, data = coastal_data,
-        main = "Time to Start of Necrosis: Control vs Salt (Coastal Ecotype)",
-        xlab = "Treatment",
-        ylab = "Days to Start of Necrosis",
-        col = c("lightgreen", "lightblue"))
-
-# If ggplot2 is available, we can use it for a more advanced plot
-if (require(ggplot2)) {
-  # Create a ggplot boxplot
-  p <- ggplot(coastal_data, aes(x = treatment, y = est_start, fill = treatment)) +
-    geom_boxplot() +
-    labs(title = "Time to Start of Necrosis: Control vs Salt (Coastal Ecotype)",
-         x = "Treatment",
-         y = "Days to Startof Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p)
-  
-  # Add individual data points with jitter
-  p2 <- ggplot(coastal_data, aes(x = treatment, y = est_start, fill = treatment)) +
-    geom_boxplot(alpha = 0.7) +
-    geom_jitter(width = 0.2, alpha = 0.5) +
-    labs(title = "Time to Start of Necrosis: Control vs Salt (Coastal Ecotype)",
-         subtitle = "Individual data points shown with jitter",
-         x = "Treatment",
-         y = "Days to Start of Necrosis") +
-    scale_fill_manual(values = c("Control" = "lightgreen", "Salt" = "lightblue")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  print(p2)
-
-}
-
-# Load required packages
-library(ggplot2)
-library(dplyr)
-library(tidyr)
 
 #BHE plots
 bhe_data <- filter(dat, pop=="BHE")
@@ -875,17 +543,17 @@ library(ggplot2)
 
 View(tor)
 
-m_nest_start <- aov(data=dat, est_start ~ trt * ecotype/pop)
+m_nest_start <- aov(data=dat, est_start ~ treatment * ecotype/pop)
 summary(m_nest_start)
 coefficients(m_nest_start)
 
-m_nest_full <- aov(data=dat, est_full ~ trt * ecotype/pop)
+m_nest_full <- aov(data=dat, est_full ~ treatment * ecotype/pop)
 summary(m_nest_full)
 coefficients(m_nest_full)
 
 # Residual diagnostics to see if data meet assumptions
-res.vals <- resid(m_nest)
-pred.vals <- fitted(m_nest) # Fitted values
+res.vals <- resid(m_nest_start)
+pred.vals <- fitted(m_nest_start) # Fitted values
 # Is there a pattern in the residuals?
 plot(pred.vals, res.vals, main = "Residuals vs. pred.vals values",
      las = 1, xlab = "Predicted values", ylab = "Residuals", pch = 19)
@@ -903,7 +571,7 @@ lsms <- emmip(m_nest_start, pop ~ ecotype*treatment,CIs=TRUE, plotit=FALSE)
 
 lsms$color <- ifelse(lsms$ecotype == "coastal", '#514663', '#cacf85')
 
-start_plot <- emmip(m_nest_start, pop ~ ecotype*trt,CIs=TRUE, col = lsms$color,
+start_plot <- emmip(m_nest_start, pop ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
                 dotarg = list(shape = shapes, cex = 5, col="black",
                               fill = lsms$color), 
                 linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
@@ -912,7 +580,7 @@ start_plot <- emmip(m_nest_start, pop ~ ecotype*trt,CIs=TRUE, col = lsms$color,
   scale_x_discrete(limits = c("coastal control", "coastal salt", "inland control", "inland salt"))
 
 
-full_plot <- emmip(m_nest_full, pop ~ ecotype*trt,CIs=TRUE, col = lsms$color,
+full_plot <- emmip(m_nest_full, pop ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
                     dotarg = list(shape = shapes, cex = 5, col="black",
                                   fill = lsms$color), 
                     linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
@@ -921,3 +589,10 @@ full_plot <- emmip(m_nest_full, pop ~ ecotype*trt,CIs=TRUE, col = lsms$color,
   scale_x_discrete(limits = c("coastal control", "coastal salt", "inland control", "inland salt"))
 
 
+
+ggarrange(succulence_plot)
+ggsave(ggarrange(succulence_plot, start_plot, 
+                 nrow=1, ncol=2), 
+       filename = "tolerance_traits_fig.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 10, height = 3.5, units = "in")
