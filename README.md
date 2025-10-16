@@ -34,5 +34,7 @@ stomata_lengths_leaf_surface_data.xlsx:     stomatal length from common garden
 
 stomatal density data.xlsx:                  stomatal density from common garden 
 
-
+# Contact angle protocol
+Contact angle protocol.pdf describes workflow for using Contact Angle plugin in ImageJ
+to measure contact angle from images of water drop on leaf surface.
 
