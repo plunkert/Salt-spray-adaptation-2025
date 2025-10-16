@@ -20,7 +20,7 @@ coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
 inland_pops = c('SWC', 'LMC', 'TOR', 'OAE', 'RGR')
 
 # Read in contact angle data
-setwd("~/Documents/GitHub/Leaf-surface-traits-2024/")
+setwd("~/Documents/GitHub/Salt-spray-adaptation-2025//")
 
 contact_angle =  read_xlsx(
   path = './Data/Contact Angle Measurements.xlsx', # Change path here

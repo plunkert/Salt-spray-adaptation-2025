@@ -18,9 +18,9 @@ coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
 inland_pops = c('SWC', 'LMC', 'TOR', 'OAE', 'RGR')
 
 # Read in leaf mass and area data
-setwd("~/Documents/GitHub/Leaf-surface-traits-2024/")
+setwd("~/Documents/GitHub/Salt-spray-adaptation-2025/")
 
-mass_area <- read_excel("~/Documents/GitHub/Leaf-surface-traits-2024/Data/MP-AES_leaf_mass_area.xlsx",
+mass_area <- read_excel("~/Documents/GitHub/Salt-spray-adaptation-2025/Data/MP-AES_leaf_mass_area.xlsx",
                   sheet="Sheet1")
 # get pop_code, treatment, and replicate columns from leaf_id
 mass_area$pop_code = substr(mass_area$leaf_id, 1, 3)
@@ -49,7 +49,7 @@ mass_area$lma <- mass_area$dry_weight_g*10000/mass_area$area_cm2 # convert to g/
 mass_area$succulence <- (mass_area$fresh_weight_g - mass_area$dry_weight_g)/mass_area$area_cm2
 
 # Read in MP-AES data
-mpaes <- read.csv("./Data/coastal_inland_exclusion_test_mpaes.csv", header=FALSE)
+mpaes <- read_excel("./Data/coastal_inland_exclusion_test_mpaes.xlsx", sheet="Sheet1")
 colnames(mpaes) <- mpaes[2,]
 mpaes <- mpaes[-c(1,2),]
 colnames(mpaes)[5] <- "element_label"
@@ -180,8 +180,56 @@ anovaTable(m_nest_suc, "Succulence")
 anovaTable(m_nest_lma, "LMA")
 anovaTable(m_nest_M, "Concentration of Na (M)")
 
+# Make figures showing LSMs of each accession as a function of ecotype and treatment
 
 
+# Let's try a plot showing LSMs
+shapes <- rep(c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24), 2)
+
+lsms <- emmip(m_nest_suc, pop_code ~ ecotype*treatment,CIs=TRUE, plotit=FALSE)
+
+lsms$color <- ifelse(lsms$ecotype == "coastal", '#514663', '#cacf85')
+
+succulence_plot <- emmip(m_nest_suc, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                         dotarg = list(shape = shapes, cex = 5, col="black",
+                                       fill = lsms$color), 
+                         linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Succulence (g H2O / cm^2)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
 
 
+lma_lsm_plot <- emmip(m_nest_lma, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                      dotarg = list(shape = shapes, cex = 5, col="black",
+                                    fill = lsms$color), 
+                      linearg = list(linetype="solid", col="black"), type = "response", plotit = T, dodge = 0.4) +
+  ylab('LMA (g/m^2)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
 
+ggsave(lma_lsm_plot, 
+       filename = "lma_lsm_ecotype_salt.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 4, height = 3.5, units = "in")
+
+M_plot <- emmip(m_nest_M, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                dotarg = list(shape = shapes, cex = 5, col="black",
+                              fill = lsms$color), 
+                linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('Concentration of Na (M)') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
+
+umol_plot <- emmip(m_nest_umol, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
+                   dotarg = list(shape = shapes, cex = 5, col="black",
+                                 fill = lsms$color), 
+                   linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
+  ylab('umol Na per cm^2 leaf') + xlab("Spray Treatment and Ecotype") +
+  theme(axis.text = element_text(size = 12)) +
+  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
+
+ggsave(ggarrange(M_plot, umol_plot, succulence_plot, 
+                 nrow=1, ncol=3), 
+       filename = "salt_response_lsms_ecotype1.svg", 
+       path = "./Results/Figures/SVGs_for_MS/",
+       device="svg", width = 10, height = 3.5, units = "in")

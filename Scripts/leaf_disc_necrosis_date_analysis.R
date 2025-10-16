@@ -7,7 +7,7 @@ library(dplyr)
 library(ggplot2)
 library(emmeans)
 
-dat <- read_excel("~/Documents/Github/Leaf-surface-traits-2024/Data/Leaf_disc_date_data.xlsx")
+dat <- read_excel("~/Documents/Github/Salt-spray-adaptation-2025/Data/Leaf_disc_date_data.xlsx")
 View(dat)
 colnames(dat) <- c("leaf_id", "est_start", "est_full", "Notes_1", "Notes_2", "disc_num" )
 

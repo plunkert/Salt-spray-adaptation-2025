@@ -16,7 +16,7 @@ require(ggrepel)
 
 # Read in Mimulus collection data and pull coordinates for relevant accessions
 
-setwd("~/Documents/GitHub/Leaf-surface-traits-2024/") # Change this
+setwd("~/Documents/GitHub/Salt-spray-adaptation-2025//") # Change this
 dat <- read_excel("./Results/Tables/Table S1 leaf_surface_supp_table_accession_list.xlsx")
 
 # List accessions used
