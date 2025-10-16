@@ -1,11 +1,10 @@
-# Analysis of stomatal traits from coastal and inland accessions in a common garden.
+# Analysis of stomatal and hydrophobicity traits from coastal and inland accessions in a common garden.
 # This script wrangles and cleans data, performs calculations related to stomatal 
 # allocation and leaf water droplet adhesion assay, fits nested ANOVAs for the differences 
 # between ecotypes in leaf surface traits, and produces figures and tables describing these results.
 
-# The leaf surface trait analysis is floating between many different scripts, leading
-# to repetitive code across scripts. Consolidating into a single analysis for all 
-# leaf traits (but not including anything with salt/control treatments).
+# Consolidating into a single analysis for allleaf traits (but not including 
+# anything with salt/control treatments).
 
 require(tidyverse)
 require(readxl)

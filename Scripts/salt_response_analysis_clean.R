@@ -1,5 +1,5 @@
 # Sodium treatment response analysis: includes leaf mass, area, and MP-AES, only analyses
-# for MS
+# related to MP-AES and succulence.
 
 # Consolidating analyses of coastal/inland ecotypes under salt and control 
 # treatments into a single script and reducing repetitive code.

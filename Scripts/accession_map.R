@@ -1,4 +1,5 @@
-# Create map of accessions used in leaf surface study
+# Create map of accessions used in leaf surface study. Indicate ecotype using colors
+# and latitudinal pairs using like shapes for the two accessions in each pair.
 
 require(tidyr)
 require(readxl)
@@ -16,23 +17,11 @@ require(ggrepel)
 # Read in Mimulus collection data and pull coordinates for relevant accessions
 
 setwd("~/Documents/GitHub/Leaf-surface-traits-2024/") # Change this
-all_pops <- read_excel("./Data/Mimulus_Collections_8_05_24.xlsx", sheet = "CollectionCompilation_080524")
+dat <- read_excel("./Results/Tables/Table S1 leaf_surface_supp_table_accession_list.xlsx")
 
 # List accessions used
 inland_pops <- c("TOR", "RGR", "LMC", "SWC", "OAE")
 coastal_pops <- c("HEC", "OPB", "SWB", "PGR", "BHE")
-
-dat <- all_pops[which(all_pops$Species=="M. guttatus" & (all_pops$`Population Code` %in% coastal_pops | all_pops$`Population Code` %in% inland_pops)),]
-
-# When two collection entries exist, choose the one by D. Lowry
-dat <- dat[which(dat$Collector == "D. Lowry" | dat$Collector == "D. Lowry/K. Wright"),]
-
-# Remove unnecessary columns
-dat <- subset(dat, select = c(`Population Code`, Latitude, Longitude))
-colnames(dat) <- c("pop_code", "Latitude", "Longitude")
-dat$ecotype <- case_when(dat$pop_code %in% coastal_pops ~ "coastal",
-                         dat$pop_code %in% inland_pops ~ "inland")
-
 
 range(dat$Latitude)
 range(dat$Longitude)
@@ -52,14 +41,14 @@ base <- ggplot(data = ca_or_nv_wa,
         panel.border=element_blank(),
         panel.grid=element_line(colour = "lightsteelblue2"))
 
-dat$adjust <- case_when(dat$ecotype=="coastal" ~ -1.2,
-                        dat$ecotype=="inland" ~ 1.2)
+dat$adjust <- case_when(dat$Ecotype=="coastal" ~ -1.2,
+                        dat$Ecotype=="inland" ~ 1.2)
 
 shapes <- as.integer(c(21, 22, 25, 21, 23, 24, 23, 25, 22, 24))
 
 points_map <- base +
-  geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = ecotype), color = "black", shape = shapes, inherit.aes = FALSE, cex=5)+
-  geom_text_repel(data= dat,aes(x=Longitude, y=Latitude, label=pop_code), nudge_x=dat$adjust, fontface = "bold", segment.color = 'transparent', size=4.5, inherit.aes = FALSE) +
+  geom_point(data=dat, aes(x=Longitude, y=Latitude, fill = Ecotype), color = "black", shape = shapes, inherit.aes = FALSE, cex=5)+
+  geom_text_repel(data= dat,aes(x=Longitude, y=Latitude, label=Population_Code), nudge_x=dat$adjust, fontface = "bold", segment.color = 'transparent', size=4.5, inherit.aes = FALSE) +
   scale_fill_manual(values = c('#514663', '#cacf85'), labels=c("Coastal", "Inland"), name=NULL)+
   scale_color_manual("black", "black", name=NULL)
 
