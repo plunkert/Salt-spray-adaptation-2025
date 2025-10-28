@@ -1,0 +1,6 @@
+"Source of variation","Effect of","Effect size","df","F","p-value"
+"Treatment","Salt",2.31389,"1",217.96,"<0.00001"
+"Ecotype","Inland",-0.12961,"1",10.07,"0.0024"
+"Treatment:Ecotype","Salt:Inland",1.99645,"1",11.23,"0.00141"
+"Treatment:Ecotype:Accession","",NA,"16",3.24,"5e-04"
+"Error","",NA,"59",NA,NA

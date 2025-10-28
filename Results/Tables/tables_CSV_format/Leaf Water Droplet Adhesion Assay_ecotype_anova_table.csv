@@ -1,0 +1,4 @@
+Source of variation,Effect of,Effect size,df,F,p-value
+Ecotype,Inland,-0.01357,1,24.35,<0.00001
+Accession (Ecotype),,,8,2.69,0.00888
+Error,,,135,,

@@ -20,7 +20,7 @@ coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
 inland_pops = c('SWC', 'LMC', 'TOR', 'OAE', 'RGR')
 
 # Read in contact angle data
-setwd("~/Documents/GitHub/Salt-spray-adaptation-2025//")
+setwd("~/Documents/GitHub/Salt-spray-adaptation-2025/")
 
 contact_angle =  read_xlsx(
   path = './Data/Contact Angle Measurements.xlsx', # Change path here
@@ -295,7 +295,7 @@ ggsave(ggarrange(succulence_plot, lma_plot, nrow=1, ncol=2),
 options(knitr.kable.NA = '')
 
 
-# Make a function that takes a nested ANOVA and outputs a formatted table
+# Make a function that takes a nested ANOVA and outputs a formatted table and saves a CSV
 anovaTable <- function(model, title){
   # make vector of sources of variation
   sov <- c("Ecotype", "Accession (Ecotype)", "Error")
@@ -306,10 +306,12 @@ anovaTable <- function(model, title){
   tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(model)$Df, 
                              anova(model)$F, anova(model)$`Pr(>F)`))
   colnames(tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
-  tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+  unformatted <- tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
                                F = round(as.numeric(F), 2),
                                `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
-                                                     .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+                                                     .default = as.character(round(as.numeric(`p-value`), 5))))
+  write.csv(unformatted, file = paste("./Results/Tables/tables_CSV_format/", title, "_ecotype_anova_table.csv", sep=""), row.names=FALSE)
+  unformatted %>% 
     kbl(caption = title) %>% kable_classic() %>% 
     row_spec(which(as.numeric(tbl$`p-value`) < 0.05), bold=T) %>%
     save_kable(paste("./temp/", title, "_ecotype_anova_table.html", sep="")) %>% 

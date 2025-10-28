@@ -152,7 +152,7 @@ m_nest_umol <- aov(data=mpaes_Na, umol_per_area ~ treatment * ecotype/pop_code)
 # tell kable not to plot NAs
 options(knitr.kable.NA = '')
 
-# Make a function that takes a nested ANOVA and outputs a formatted table
+# Make a function that takes a nested ANOVA and outputs a formatted table and a CSV
 anovaTable <- function(model, title){
   # make vector of sources of variation
   sov <- c("Treatment", "Ecotype", "Treatment:Ecotype", "Treatment:Ecotype:Accession", "Error")
@@ -164,10 +164,12 @@ anovaTable <- function(model, title){
   tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(model)$Df, 
                              anova(model)$F, anova(model)$`Pr(>F)`))
   colnames(tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
-  tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
+  unformatted <- tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
                  F = round(as.numeric(F), 2),
                  `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
-                                       .default = as.character(round(as.numeric(`p-value`), 5)))) %>%
+                                       .default = as.character(round(as.numeric(`p-value`), 5))))
+  write.csv(unformatted, file = paste("./Results/Tables/tables_CSV_format/", title, "_ecotype_anova_table.csv", sep=""), row.names=FALSE)
+  unformatted %>%
     kbl(caption = title) %>% kable_classic() %>% 
     row_spec(which(as.numeric(tbl$`p-value`) < 0.05), bold=T) %>%
     save_kable(paste("./temp/", title, "_ecotype_anova_table.html", sep="")) %>% 
