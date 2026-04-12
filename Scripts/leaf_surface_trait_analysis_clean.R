@@ -3,7 +3,7 @@
 # allocation and leaf water droplet adhesion assay, fits nested ANOVAs for the differences 
 # between ecotypes in leaf surface traits, and produces figures and tables describing these results.
 
-# Consolidating into a single analysis for allleaf traits (but not including 
+# Consolidating into a single analysis for all leaf traits (but not including 
 # anything with salt/control treatments).
 
 require(tidyverse)
@@ -176,9 +176,9 @@ m_nest_adhesion <- aov(data=dat_area, adhesion_result ~ ecotype/pop_code)
 shapes <- c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24)
 
 ang_ad_plot <- emmip(m_nest_ang_ad, pop.code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                         dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                       fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Adaxial Contact Angle (°)') + xlab("Ecotype") +
+                     dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
+                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
+  ylab('Abaxial Contact Angle (°)') + xlab("Ecotype") +
   theme(axis.text = element_text(size = 12)) +
   ylim(42,80)
 
