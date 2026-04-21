@@ -14,7 +14,7 @@ require(ggplot2)
 require(dplyr)
 require(kableExtra)
 require(webshot2)
-
+require(lme4)
 # Which accession numbers are coastal and inland?
 coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
 inland_pops = c('SWC', 'LMC', 'TOR', 'OAE', 'RGR')
@@ -138,14 +138,117 @@ dat_area <- merge(area, dat, by = c("pop_code", "rep")) %>%
   lma = 10000*dry.mass/leaf_area_cm2, # calculate LMA and convert to g/m^2
 )
 
-## Fitting nested ANOVAs
+# Add factor variable indicating latitudinal pair
 
-# contact angle both leaf sides
-m_nest_ang_ad <- aov(data=contact_angle, contact_angle_ad ~ ecotype/pop.code)
-m_nest_ang_ab <- aov(data=contact_angle, contact_angle_ab ~ ecotype/pop.code)
+dat_area$pair <- case_when(dat_area$pop_code == "OPB" | dat_area$pop_code == "RGR" ~ "OPB/RGR",
+                           dat_area$pop_code == "HEC" | dat_area$pop_code == "SWC" ~ "HEC/SWC",
+                           dat_area$pop_code == "BHE" | dat_area$pop_code == "OAE" ~ "BHE/OAE",
+                           dat_area$pop_code == "SWB" | dat_area$pop_code == "LMC" ~ "SWB/LMC",
+                           dat_area$pop_code == "PGR" | dat_area$pop_code == "TOR" ~ "PGR/TOR",
+                      .default=NA_character_) %>% as.factor()
+
+contact_angle$pair <- case_when(contact_angle$pop.code == "OPB" | contact_angle$pop.code == "RGR" ~ "OPB/RGR",
+                           contact_angle$pop.code == "HEC" | contact_angle$pop.code == "SWC" ~ "HEC/SWC",
+                           contact_angle$pop.code == "BHE" | contact_angle$pop.code == "OAE" ~ "BHE/OAE",
+                           contact_angle$pop.code == "SWB" | contact_angle$pop.code == "LMC" ~ "SWB/LMC",
+                           contact_angle$pop.code == "PGR" | contact_angle$pop.code == "TOR" ~ "PGR/TOR",
+                           .default=NA_character_) %>% as.factor()
+
+stom_all$pair <- case_when(stom_all$pop_code == "OPB" | stom_all$pop_code == "RGR" ~ "OPB/RGR",
+                           stom_all$pop_code == "HEC" | stom_all$pop_code == "SWC" ~ "HEC/SWC",
+                           stom_all$pop_code == "BHE" | stom_all$pop_code == "OAE" ~ "BHE/OAE",
+                           stom_all$pop_code == "SWB" | stom_all$pop_code == "LMC" ~ "SWB/LMC",
+                           stom_all$pop_code == "PGR" | stom_all$pop_code == "TOR" ~ "PGR/TOR",
+                           .default=NA_character_) %>% as.factor()
+
+
+# Forcing the levels of each coastal/inland pair to have 
+
+## Fitting nested ANOVAs that include latitudinal pair
+
+# contact angle both leaf sides, slough of models
+m_nest_ang_ad_1 <- aov(data=contact_angle, contact_angle_ad ~ ecotype/pop.code)
+m_nest_ang_ad_2 <- aov(data=contact_angle, contact_angle_ad ~ pair/pop.code + ecotype)
+#m_nest_ang_ad_3 <- aov(data=contact_angle, contact_angle_ad ~ pair + ecotype/pop.code)
+#m_nest_ang_ad_4 <- aov(data=contact_angle, contact_angle_ad ~ pair + ecotype)
+#m_nest_ang_ad_6 <- aov(data=contact_angle, contact_angle_ad ~ pair/pop.code)
+#m_nest_ang_ad_7 <- aov(data=contact_angle, contact_angle_ad ~ ecotype)
+#m_nest_ang_ad_8 <- aov(data=contact_angle, contact_angle_ad ~ ecotype * pair)
+#m <- lm(data=contact_angle, contact_angle_ad ~ pair + ecotype)
+
+#Tentative plan: keep original figures and tables, but also run pairwise contrasts as
+# post-hoc test for differences between pairs
+
+anova(m, m_nest_ang_ad_3)
+AIC(m_nest_ang_ad_2, m_nest_ang_ad_3)
+
+# Let's see if LSMs are different between m_nest_ang_ad_1 and m_nest_ang_ad_2
+rg_1 <- ref_grid(m_nest_ang_ad_1)
+rg_2 <- ref_grid(m_nest_ang_ad_2)
+
+emmeans(rg_1, ~ pop.code)
+emmeans(rg_2, ~ pair/pop.code)
+
+emmeans(rg_1, ~ "ecotype")
+emmeans(rg_2, ~ "ecotype")
+
+out <- lmer(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair/pop.code)) #isSingular warning
+
+
+# is this our guy??? But not explicit about the nesting structure
+out_pair <- lmer(data=contact_angle, contact_angle_ad ~ pair + ecotype + (1|pop.code))
+drop1(out_pair, test="Chisq")
+
+# Residual diagnostics
+res.vals <- resid(out_pair) # out$residuals didn't work, trying resid function
+pred.vals <- fitted(out_pair) # Fitted values
+# Make qqnorm plot and see if points are along diagonal
+qqnorm(res.vals, pch = 19)
+qqline(res.vals, col = 'red')
+
+plot(pred.vals, res.vals, main = "Residuals vs. pred.vals values", 
+     las = 1, xlab = "Predicted values", ylab = "Residuals", pch = 19)
+abline(h = 0)
+
+out_pair_pair <- lmer(data=contact_angle, contact_angle_ad ~ pair + ecotype + (1|pair/pop.code))# does not converge
+confint(out)
+confint(out_pair)
+AIC(out, out_pair)
+
+out_pair_pair <- glmmTMB(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair/pop.code))
+summary(out_pair_pair)
+
+
+
+
+out_pair_pair_another <- glmmTMB(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair))
+
+AIC(out_pair_pair_another, out_pair_pair)
+
+# You should calculate accession means removing the effect of pair
+# take out effect of pair and accession nested w/in pair
+
+# try with contrasts
+HEC_SWC <- c(0,1,0,0,0,0,0,0,-1,0)
+OPB_RGR <- c(0,0,0,0,1,0,-1,0,0,0)
+SWB_LMC <- c(0,0,-1,0,0,0,0,1,0,0)
+BHE_OAE <- c(1,0,0,-1,0,0,0,0,0,0)
+PGR_TOR <- c(0,0,0,0,0,1,0,0,0,-1)
+
+mat <- cbind(HEC_SWC, OPB_RGR, SWB_LMC, BHE_OAE, PGR_TOR)
+summary(m)
+m.emm <- emmeans(m_nest_ang_ad_5, ~ ecotype)
+contrast(m.emm, method=list(mat), adjust='bh')
+
+
+
+m_nest_ang_ab <- aov(data=contact_angle, contact_angle_ab ~ pair/pop.code + ecotype)
+
 
 # stomatal density both leaf sides
 m_nest_dens_ad <- aov(data=stom_all, stom_density_ad ~ ecotype/pop_code)
+m_nest_dens_ad_pair <- aov(data=stom_all, stom_density_ad ~ pair/pop_code + ecotype)
+
 m_nest_dens_ab <- aov(data=stom_all, stom_density_ab ~ ecotype/pop_code)
   
 # stomatal length both leaf sides

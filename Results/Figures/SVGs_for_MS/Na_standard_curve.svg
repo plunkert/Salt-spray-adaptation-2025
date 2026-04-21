@@ -14,13 +14,14 @@
     }
   ]]></style>
 </defs>
-<rect width='100%' height='100%' style='stroke: none; fill: none;'/>
+<rect width='100%' height='100%' style='stroke: none; fill: #FFFFFF;'/>
 <defs>
   <clipPath id='cpMC4wMHw0MzIuMDB8MC4wMHw0MzIuMDA='>
     <rect x='0.00' y='0.00' width='432.00' height='432.00' />
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw0MzIuMDB8MC4wMHw0MzIuMDA=)'>
+<rect x='0.000000000000032' y='0.000000000000057' width='432.00' height='432.00' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
 </g>
 <defs>
   <clipPath id='cpNTkuOTl8NDI2LjUyfDIzLjM0fDM5NC40NQ=='>
@@ -53,7 +54,7 @@
 <circle cx='242.42' cy='199.43' r='1.95' style='stroke-width: 0.71; fill: #000000;' />
 <circle cx='326.14' cy='116.67' r='1.95' style='stroke-width: 0.71; fill: #000000;' />
 <circle cx='409.86' cy='40.20' r='1.95' style='stroke-width: 0.71; fill: #000000;' />
-<line x1='-306.53' y1='766.57' x2='793.05' y2='-358.01' style='stroke-width: 1.07; stroke: #A9A9A9; stroke-linecap: butt;' />
+<line x1='-305.55' y1='765.56' x2='783.04' y2='-347.78' style='stroke-width: 1.07; stroke: #A9A9A9; stroke-linecap: butt;' />
 </g>
 <g clip-path='url(#cpMC4wMHw0MzIuMDB8MC4wMHw0MzIuMDA=)'>
 <text x='55.06' y='383.92' text-anchor='end' style='font-size: 12.00px;fill: #4D4D4D; font-family: "Arial";' textLength='33.70px' lengthAdjust='spacingAndGlyphs'>0e+00</text>
