@@ -1,6 +1,6 @@
 # Analysis of stomatal and hydrophobicity traits from coastal and inland accessions in a common garden.
 # This script wrangles and cleans data, performs calculations related to stomatal 
-# allocation and leaf water droplet adhesion assay, fits nested ANOVAs for the differences 
+# allocation and leaf water droplet adhesion assay, fits generalized linear mixed models for the differences 
 # between ecotypes in leaf surface traits, and produces figures and tables describing these results.
 
 # Consolidating into a single analysis for all leaf traits (but not including 
@@ -14,7 +14,7 @@ require(ggplot2)
 require(dplyr)
 require(kableExtra)
 require(webshot2)
-require(lme4)
+require(glmmTMB)
 # Which accession numbers are coastal and inland?
 coastal_pops = c('BHE', 'SWB', 'PGR', 'HEC', 'OPB')
 inland_pops = c('SWC', 'LMC', 'TOR', 'OAE', 'RGR')
@@ -161,72 +161,367 @@ stom_all$pair <- case_when(stom_all$pop_code == "OPB" | stom_all$pop_code == "RG
                            stom_all$pop_code == "PGR" | stom_all$pop_code == "TOR" ~ "PGR/TOR",
                            .default=NA_character_) %>% as.factor()
 
+gsw$pair <- case_when(gsw$pop == "OPB" | gsw$pop == "RGR" ~ "OPB/RGR",
+                      gsw$pop == "HEC" | gsw$pop == "SWC" ~ "HEC/SWC",
+                      gsw$pop == "BHE" | gsw$pop == "OAE" ~ "BHE/OAE",
+                      gsw$pop == "SWB" | gsw$pop == "LMC" ~ "SWB/LMC",
+                      gsw$pop == "PGR" | gsw$pop == "TOR" ~ "PGR/TOR",
+                           .default=NA_character_) %>% as.factor()
 
-# Forcing the levels of each coastal/inland pair to have 
+# Fit models
+#hydrophobicity models
+out_ang_ad <- glmmTMB(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair/pop.code))
+summary(out_ang_ad)
+out_ang_ab <- glmmTMB(data=contact_angle, contact_angle_ab ~ ecotype + (1|pair/pop.code))
+summary(out_ang_ab)
+out_adhesion <- glmmTMB(data=dat_area, adhesion_result ~ ecotype + (1|pair/pop_code))
+summary(out_adhesion)
 
-## Fitting nested ANOVAs that include latitudinal pair
+#stomatal trait models
 
-# contact angle both leaf sides, slough of models
-m_nest_ang_ad_1 <- aov(data=contact_angle, contact_angle_ad ~ ecotype/pop.code)
-m_nest_ang_ad_2 <- aov(data=contact_angle, contact_angle_ad ~ pair/pop.code + ecotype)
-#m_nest_ang_ad_3 <- aov(data=contact_angle, contact_angle_ad ~ pair + ecotype/pop.code)
-#m_nest_ang_ad_4 <- aov(data=contact_angle, contact_angle_ad ~ pair + ecotype)
-#m_nest_ang_ad_6 <- aov(data=contact_angle, contact_angle_ad ~ pair/pop.code)
-#m_nest_ang_ad_7 <- aov(data=contact_angle, contact_angle_ad ~ ecotype)
-#m_nest_ang_ad_8 <- aov(data=contact_angle, contact_angle_ad ~ ecotype * pair)
-#m <- lm(data=contact_angle, contact_angle_ad ~ pair + ecotype)
+# stomatal density both leaf sides
+out_dens_ad <- glmmTMB(data=stom_all, stom_density_ad ~ ecotype + (1|pair/pop_code))
+summary(out_dens_ad)
+out_dens_ab <- glmmTMB(data=stom_all, stom_density_ab ~ ecotype + (1|pop_code))
+summary(out_dens_ab)
+# stomatal length both leaf sides
+out_len_ad <- glmmTMB(data=stom_all, stomate_size_ad ~ ecotype + (1|pair/pop_code))
+summary(out_len_ad)
+out_len_ab <- glmmTMB(data=stom_all, stomate_size_ab ~ ecotype + (1|pair/pop_code))
+summary(out_len_ab)
 
-#Tentative plan: keep original figures and tables, but also run pairwise contrasts as
-# post-hoc test for differences between pairs
+# fraction epidermis allocated to stomata both leaf sides
+out_frac_ad <- glmmTMB(data=stom_all, stom_ad_fraction ~ ecotype + (1|pair/pop_code))
+summary(out_frac_ad)
+out_frac_ab <- glmmTMB(data=stom_all, stom_ab_fraction ~ ecotype + (1|pair/pop_code))
+summary(out_frac_ab)
 
-anova(m, m_nest_ang_ad_3)
-AIC(m_nest_ang_ad_2, m_nest_ang_ad_3)
+# adaxial stomatal conductance
+out_gsw <- glmmTMB(data=gsw, gsw ~ ecotype + (1|pair/pop))
+summary(out_gsw)
 
-# Let's see if LSMs are different between m_nest_ang_ad_1 and m_nest_ang_ad_2
-rg_1 <- ref_grid(m_nest_ang_ad_1)
-rg_2 <- ref_grid(m_nest_ang_ad_2)
+# amphistomy
+out_amph <- glmmTMB(data=stom_all, amphistomy ~ ecotype + (1|pair/pop_code))
+summary(out_amph)
 
-emmeans(rg_1, ~ pop.code)
-emmeans(rg_2, ~ pair/pop.code)
-
-emmeans(rg_1, ~ "ecotype")
-emmeans(rg_2, ~ "ecotype")
-
-out <- lmer(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair/pop.code)) #isSingular warning
-
-
-# is this our guy??? But not explicit about the nesting structure
-out_pair <- lmer(data=contact_angle, contact_angle_ad ~ pair + ecotype + (1|pop.code))
-drop1(out_pair, test="Chisq")
-
-# Residual diagnostics
-res.vals <- resid(out_pair) # out$residuals didn't work, trying resid function
-pred.vals <- fitted(out_pair) # Fitted values
-# Make qqnorm plot and see if points are along diagonal
-qqnorm(res.vals, pch = 19)
-qqline(res.vals, col = 'red')
-
-plot(pred.vals, res.vals, main = "Residuals vs. pred.vals values", 
-     las = 1, xlab = "Predicted values", ylab = "Residuals", pch = 19)
-abline(h = 0)
-
-out_pair_pair <- lmer(data=contact_angle, contact_angle_ad ~ pair + ecotype + (1|pair/pop.code))# does not converge
-confint(out)
-confint(out_pair)
-AIC(out, out_pair)
-
-out_pair_pair <- glmmTMB(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair/pop.code))
-summary(out_pair_pair)
+# succulence model (for 15 reps w/o salt treatment)
+out_succ_ecotype <- glmmTMB(data=dat_area, succulence ~ ecotype + (1|pair/pop_code))
+summary(out_succ_ecotype)
 
 
+ad_ang_plot <- emmeans(out_ang_ad, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Adaxial Contact Angle (°)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
 
 
-out_pair_pair_another <- glmmTMB(data=contact_angle, contact_angle_ad ~ ecotype + (1|pair))
+ab_ang_plot <- emmeans(out_ang_ab, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Abaxial Contact Angle (°)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
 
-AIC(out_pair_pair_another, out_pair_pair)
+adhesion_plot <- emmeans(out_adhesion, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Leaf Water Drop Adhesion Assay (g H2O / cm2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(0.75,0.9))
 
-# You should calculate accession means removing the effect of pair
-# take out effect of pair and accession nested w/in pair
+hydrophobicity_fig <- plot_grid(ad_ang_plot, ab_ang_plot, adhesion_plot, ncol = 3, labels = c("A", "B", "C"), label_size=18, align="hv")
+save_plot("./Results/Figures/hydrophobicity_lsms_ecotype.svg", plot=hydrophobicity_fig, base_width = 9, base_height = 5)
+
+
+# Adaxial stomatal trait figures for main text
+ad_dens_plot <- emmeans(out_dens_ad, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Adaxial Stomatal Density (mm-2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+ad_len_plot <- emmeans(out_len_ad, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Adaxial Stomatal Length (μm)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+ad_frac_plot <- emmeans(out_frac_ad, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Stomatal Area / Epidermis Area")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(0.75,0.77))
+
+gsw_plot <- emmeans(out_gsw, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="gsw (μmol m-2 s-1)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+amphistomy_plot <- emmeans(out_amph, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Amphistomy (adaxial/abaxial)")+
+  geom_hline(yintercept=1, linetype="dashed")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+ad_stom_fig <- plot_grid(ad_dens_plot, ad_len_plot, ad_frac_plot, gsw_plot, amphistomy_plot, 
+                         ncol = 3, nrow=2, labels = "AUTO", label_size=18,align="hv")
+save_plot("./Results/Figures/stomata_ad_lsms_ecotype.svg", plot=ad_stom_fig, base_width = 9, base_height = 5)
+
+# Abaxial stomatal trait figures for supplement
+ab_dens_plot <- emmeans(out_dens_ab, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Abaxial Stomatal Density (mm-2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+ab_len_plot <- emmeans(out_len_ab, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Abaxial Stomatal Length (μm)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+ab_frac_plot <- emmeans(out_frac_ab, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Stomatal Area / Epidermis Area")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(0.75, 0.9))
+
+ab_stom_fig <- plot_grid(ab_dens_plot, ab_len_plot, ab_frac_plot, 
+                         ncol = 3, labels = "AUTO", label_size=18,align="hv")
+save_plot("./Results/Figures/stomata_ab_lsms_ecotype.svg", plot=ab_stom_fig, base_width = 9, base_height = 5)
+
+succ_ecotype_plot <- emmeans(out_succ_ecotype, specs="ecotype") %>% as.data.frame() %>% ggplot() +
+  aes(x=ecotype, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Ecotype",y="Succulence (g H2O / cm2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+
+
+# Make a function that takes a model and outputs a CSV of fixed effects, std error, and their significance
+glmmtmbTableEco <- function(model, title){
+  summary(model)
+  # make vector of effects and what they mean
+  effect <- c("Intercept(coastal)", "Ecotype(inland)")
+  tbl <- as.data.frame(cbind(effect, coef(summary(model))$cond[,c(1:4)]))
+  
+  colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
+  csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
+                        SE = round(as.numeric(SE), 4),
+                        `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
+                                              .default = as.character(round(as.numeric(`p-value`), 4))))
+  write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)
+}
+
+glmmtmbTableEco(out_ang_ad, "Adaxial Contact Angle")
+glmmtmbTableEco(out_ang_ab, "Abaxial Contact Angle")
+glmmtmbTableEco(out_adhesion, "Leaf Water Drop Adhesion Assay")
+
+glmmtmbTableEco(out_dens_ad, "Adaxial Stomatal Density")
+glmmtmbTableEco(out_dens_ab, "Abaxial Stomatal Density")
+glmmtmbTableEco(out_len_ad, "Adaxial Stomatal Length")
+glmmtmbTableEco(out_len_ab, "Abaxial Stomatal Length")
+glmmtmbTableEco(out_gsw, "gsw_ad")
+glmmtmbTableEco(out_amph, "Amphistomy")
+glmmtmbTableEco(out_frac_ad, "Fraction Stomata Adaxial")
+glmmtmbTableEco(out_frac_ab, "Fraction Stomata Abaxial")
+glmmtmbTableEco(out_succ_ecotype, "Succulence Ecotype")
+
+# Make plots that show accession means for each trait!
+# Make dataframes with means and standard errors for each trait
+
+ang_ad_means <- contact_angle %>% group_by(pop.code) %>% 
+  summarise(mean = mean(contact_angle_ad), se = sd(contact_angle_ad)/sqrt(length(contact_angle_ad)))
+ang_ab_means <- contact_angle %>% filter(!is.na(contact_angle_ab)) %>% group_by(pop.code) %>% 
+  summarise(mean = mean(contact_angle_ab), se = sd(contact_angle_ab)/sqrt(length(contact_angle_ab)))
+adhesion_means <- dat_area %>% filter(!is.na(adhesion_result)) %>% group_by(pop_code) %>% 
+  summarise(mean = mean(adhesion_result), se = sd(adhesion_result)/sqrt(length(adhesion_result)))
+
+stom_dens_ad_means <- stom_all %>% group_by(pop_code) %>% 
+  summarise(mean = mean(stom_density_ad), se = sd(stom_density_ad)/sqrt(length(stom_density_ad)))
+stom_dens_ab_means <- stom_all %>% group_by(pop_code) %>% 
+  summarise(mean = mean(stom_density_ab), se = sd(stom_density_ab)/sqrt(length(stom_density_ab)))
+
+stom_len_ad_means <- stom_all %>% group_by(pop_code) %>% 
+  summarise(mean = mean(stomate_size_ad), se = sd(stomate_size_ad)/sqrt(length(stomate_size_ad)))
+stom_len_ab_means <- stom_all %>% group_by(pop_code) %>% 
+  summarise(mean = mean(stomate_size_ab), se = sd(stomate_size_ab)/sqrt(length(stomate_size_ab)))
+
+stom_frac_ad_means <- stom_all %>% group_by(pop_code) %>% 
+  summarise(mean = mean(stom_ad_fraction), se = sd(stom_ad_fraction)/sqrt(length(stom_ad_fraction)))
+stom_frac_ab_means <- stom_all %>% group_by(pop_code) %>% 
+  summarise(mean = mean(stom_ab_fraction), se = sd(stom_ab_fraction)/sqrt(length(stom_ab_fraction)))
+
+gsw_means <- gsw %>% group_by(pop) %>% 
+  summarise(mean = mean(gsw), se = sd(gsw)/sqrt(length(gsw)))
+
+amph_means <- stom_all %>% group_by(pop_code) %>%
+  summarise(mean = mean(amphistomy), se = sd(amphistomy)/sqrt(length(amphistomy)))
+
+ecotype_vec <- c("coastal", "coastal", "inland", "inland", "coastal", "coastal", "inland", "coastal",
+                 "inland", "inland")
+
+shapes <- c(21,22,25,21,23,24,23,25,22,24)
+
+acc_ang_ad_plot <- ang_ad_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Adaxial Contact Angle (°)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_ang_ab_plot <- ang_ab_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Abaxial Contact Angle (°)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_adhesion_plot <- adhesion_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Leaf Water Drop Adhesion Result (g H2O / cm2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(0.25,0.9))
+
+hydrophobicity_supp_acc_fig <- plot_grid(acc_ang_ad_plot, acc_ang_ad_plot, acc_adhesion_plot, ncol = 3, labels = "AUTO", label_size=18, align="hv")
+save_plot("./Results/Figures/hydrophobicity_acc_supp_fig.svg", plot=hydrophobicity_supp_acc_fig, base_width = 9, base_height = 5)
+
+acc_stom_dens_ad_plot <- stom_dens_ad_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Adaxial Stomatal Density (mm-2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_stom_dens_ab_plot <- stom_dens_ab_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Abaxial Stomatal Density (mm-2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_stom_len_ad_plot <- stom_len_ad_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Adaxial Stomatal Length (µm)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_stom_len_ab_plot <- stom_len_ab_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Abaxial Stomatal Length (µm)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_frac_ad_plot <- stom_frac_ad_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Stomatal Area / Epidermis Area (adaxial)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(0.7,0.8))
+
+
+acc_frac_ab_plot <- stom_frac_ab_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Stomatal Area / Epidermis Area (abaxial)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_gsw_plot <- gsw_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="gsw (µmol m-2 s-1)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_amph_plot <- amph_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecotype_vec) +
+  scale_fill_manual(values=c('#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Ecotype", y="Amphistomy (adaxial/abaxial)")+
+  theme_bw()+
+  geom_hline(yintercept=1, linetype="dashed")+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+stomata_acc_supp_fig <- plot_grid(acc_stom_dens_ad_plot, acc_stom_len_ad_plot, acc_frac_ad_plot,
+                                  acc_stom_dens_ab_plot, acc_stom_len_ab_plot, acc_frac_ab_plot,
+                                  acc_gsw_plot, acc_amph_plot,
+                                  ncol = 3, labels = "AUTO", label_size=18, align="hv")
+
+save_plot("./Results/Figures/stomata_acc_supp_fig.svg", plot=stomata_acc_supp_fig, base_width = 9, base_height = 9)
+
 
 # try with contrasts
 HEC_SWC <- c(0,1,0,0,0,0,0,0,-1,0)
@@ -241,198 +536,3 @@ m.emm <- emmeans(m_nest_ang_ad_5, ~ ecotype)
 contrast(m.emm, method=list(mat), adjust='bh')
 
 
-
-m_nest_ang_ab <- aov(data=contact_angle, contact_angle_ab ~ pair/pop.code + ecotype)
-
-
-# stomatal density both leaf sides
-m_nest_dens_ad <- aov(data=stom_all, stom_density_ad ~ ecotype/pop_code)
-m_nest_dens_ad_pair <- aov(data=stom_all, stom_density_ad ~ pair/pop_code + ecotype)
-
-m_nest_dens_ab <- aov(data=stom_all, stom_density_ab ~ ecotype/pop_code)
-  
-# stomatal length both leaf sides
-m_nest_length_ad <- aov(data=stom_all, stomate_size_ad ~ ecotype/pop_code)
-m_nest_length_ab <- aov(data=stom_all, stomate_size_ab ~ ecotype/pop_code)
-
-# fraction epidermis allocated to stomata both leaf sides
-m_nest_frac_ad <- aov(data=stom_all, stom_ad_fraction ~ ecotype/pop_code)
-m_nest_frac_ab <- aov(data=stom_all, stom_ab_fraction ~ ecotype/pop_code)
-
-# adaxial stomatal conductance
-m_nest_gsw <- aov(data=gsw, gsw ~ ecotype/pop)
-
-# amphistomy
-m_nest_amph <- aov(data=stom_all, amphistomy ~ ecotype/pop_code)
-
-# succulence
-m_nest_succ <- aov(data=dat_area, succulence ~ ecotype/pop_code)
-
-# LMA
-m_nest_lma <- aov(data=dat_area, lma ~ ecotype/pop_code)
-
-# Leaf water drop adhesion assay
-m_nest_adhesion <- aov(data=dat_area, adhesion_result ~ ecotype/pop_code)
-
-# Making figures <3
-
-shapes <- c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24)
-
-ang_ad_plot <- emmip(m_nest_ang_ad, pop.code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                     dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Abaxial Contact Angle (°)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  ylim(42,80)
-
-ang_ab_plot <- emmip(m_nest_ang_ab, pop.code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                     dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Abaxial Contact Angle (°)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  ylim(42,80)
-
-stom_dens_ad_plot <- emmip(m_nest_dens_ad, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                     dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Stomatal Density') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-stom_dens_ab_plot <- emmip(m_nest_dens_ab, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                           dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                         fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Stomatal Density') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-stom_length_ad_plot <- emmip(m_nest_length_ad, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                          dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                        fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Stomatal Length (um)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-stom_length_ab_plot <- emmip(m_nest_length_ab, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                             dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                           fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Stomatal Length (um)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-stom_frac_ad_plot <- emmip(m_nest_frac_ad, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                             dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                           fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Stomatal Area / Epidermis Area') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-stom_frac_ab_plot <- emmip(m_nest_frac_ab, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                           dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                         fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Stomatal Area / Epidermis Area') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-gsw_plot <- emmip(m_nest_gsw, pop ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                           dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                         fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('gsw (umol m^-2 s^-1)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-amph_plot <- emmip(m_nest_amph, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                   dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                 fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Amphistomy (adaxial/abaxial)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  geom_hline(yintercept=1, linetype="dotted")
-  
-succulence_plot <- emmip(m_nest_succ, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                     dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                   fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Succulence (g H2O / cm2 leaf') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-adhesion_plot <- emmip(m_nest_adhesion, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                         dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                       fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('Leaf Water Drop Adhesion Assay (g H2O/cm2)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-lma_plot <- emmip(m_nest_lma, pop_code ~ ecotype,CIs=TRUE, col=c(rep('#514663', 5), rep('#cacf85', 5)),
-                       dotarg = list(shape = shapes, cex = 5, col="black", position="jitter",
-                                     fill = c(rep('#514663', 5), rep('#cacf85', 5))), type = "response", plotit = T, dodge = 0.4) +
-  ylab('LMA (g/m2)') + xlab("Ecotype") +
-  theme(axis.text = element_text(size = 12))
-
-# Now put them together for MS
-
-
-# wettability figure
-ggsave(ggarrange(ang_ad_plot, ang_ab_plot, adhesion_plot, 
-                 nrow=1, ncol=3), 
-       filename = "hydrophobicity_lsms_ecotype.svg", 
-       path = "./Results/Figures/SVGs_for_MS/",
-       device="svg", width = 10, height = 3.5, units = "in")
-
-# adaxial stomatal traits figure
-ggsave(ggarrange(stom_dens_ad_plot, stom_length_ad_plot, stom_frac_ad_plot, 
-                 gsw_plot, amph_plot, nrow=2, ncol=3), 
-       filename = "stomatal_figs_lsms_ecotype.svg", 
-       path = "./Results/Figures/SVGs_for_MS/",
-       device="svg", width = 10, height = 7, units = "in")
-
-# abaxial stomatal traits supplemental figure
-
-ggsave(ggarrange(stom_dens_ab_plot, stom_length_ab_plot, stom_frac_ab_plot, 
-                 nrow=1, ncol=3), 
-       filename = "stomatal_figs_abaxial_lsms_ecotype.svg", 
-       path = "./Results/Figures/SVGs_for_MS/",
-       device="svg", width = 10, height = 3.5, units = "in")
-
-
-# succulence and LMA supplemental figure
-ggsave(ggarrange(succulence_plot, lma_plot, nrow=1, ncol=2),
-       filename = "LMA_succulence_lsms_ecotype.svg",
-       path = "./Results/Figures/SVGs_for_MS/",
-       device="svg", width = 8, height = 3.5, units = "in")
-
-
-# Let's make tables!!
-
-# tell kable not to plot NAs
-options(knitr.kable.NA = '')
-
-
-# Make a function that takes a nested ANOVA and outputs a formatted table and saves a CSV
-anovaTable <- function(model, title){
-  # make vector of sources of variation
-  sov <- c("Ecotype", "Accession (Ecotype)", "Error")
-  # make vector to describe what effect sizes indicate
-  effect_meaning <- c("Inland", "", "")
-  # vector of main and nested effects
-  effects <- c(as.numeric(model$coefficients[2]), "", "")
-  tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(model)$Df, 
-                             anova(model)$F, anova(model)$`Pr(>F)`))
-  colnames(tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
-  unformatted <- tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
-                               F = round(as.numeric(F), 2),
-                               `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
-                                                     .default = as.character(round(as.numeric(`p-value`), 5))))
-  write.csv(unformatted, file = paste("./Results/Tables/tables_CSV_format/", title, "_ecotype_anova_table.csv", sep=""), row.names=FALSE)
-  unformatted %>% 
-    kbl(caption = title) %>% kable_classic() %>% 
-    row_spec(which(as.numeric(tbl$`p-value`) < 0.05), bold=T) %>%
-    save_kable(paste("./temp/", title, "_ecotype_anova_table.html", sep="")) %>% 
-    webshot(paste("./Results/Tables/", title, "_ecotype_anova_table.pdf", sep=""), vwidth = 496)
-  
-}
-
-
-anovaTable(m_nest_adhesion, "Leaf Water Droplet Adhesion Assay")
-anovaTable(m_nest_amph, "Amphistomy")
-anovaTable(m_nest_ang_ab, "Abaxial Contact Angle")
-anovaTable(m_nest_ang_ad, "Adaxial Contact Angle")
-anovaTable(m_nest_dens_ab, "Abaxial Stomatal Density")
-anovaTable(m_nest_dens_ad, "Adaxial Stomatal Density")
-anovaTable(m_nest_frac_ab, "Fraction of Abaxial Epidermis Allocated to Stomata")
-anovaTable(m_nest_frac_ad, "Fraction of Adaxial Epidermis Allocated to Stomata")
-anovaTable(m_nest_gsw, "Adaxial Stomatal Conductance")
-anovaTable(m_nest_length_ab, "Abaxial Stomatal Length")
-anovaTable(m_nest_length_ad, "Adaxial Stomatal Length")
-anovaTable(m_nest_lma, "LMA")
-anovaTable(m_nest_succ, "Succulence")

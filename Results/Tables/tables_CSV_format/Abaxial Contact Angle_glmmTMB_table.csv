@@ -1,0 +1,3 @@
+"Effect","Estimate","SE","z-value","p-value"
+"Intercept(coastal)",62.4182,1.8936,"32.9628709418594","<0.0001"
+"Ecotype(inland)",5.0233,2.6729,"1.87937494245478","0.0602"

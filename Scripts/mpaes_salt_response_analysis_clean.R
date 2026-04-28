@@ -7,6 +7,7 @@
   require(tidyverse)
   require(readxl)
   require(ggpubr)
+  require(cowplot)
   require(emmeans)
   require(ggplot2)
   require(dplyr)
@@ -150,105 +151,163 @@ mpaes_Na$pair <- case_when(mpaes_Na$pop_code == "OPB" | mpaes_Na$pop_code == "RG
                            .default=NA_character_) %>% as.factor()
 
 
-## Fitting nested ANOVAs
-m_nest_suc <- aov(data=mpaes_Na, succulence ~  treatment * ecotype/pop_code)
-m_nest_lma <- aov(data=mpaes_Na, lma ~ treatment * ecotype/pop_code)
-m_nest_M <- aov(data=mpaes_Na, molarity ~ treatment * ecotype/pop_code)
-m_nest_umol <- aov(data=mpaes_Na, umol_per_area ~ treatment * ecotype/pop_code)
+## Fitting linear models
 
-# Try lmer
+out_suc <- glmmTMB(data=mpaes_Na, succulence ~ ecotype*treatment + (1|pair/pop_code))
+out_lma <- glmmTMB(data=mpaes_Na, lma ~ ecotype*treatment + (1|pair/pop_code))
 out_excl <- glmmTMB(data=mpaes_Na, umol_per_area ~ ecotype*treatment + (1|pair/pop_code))
-summary(out_excl)
-confint(out_excl)
+
+# LMA had wacky responses. Let's see if mass and area respond individually:
+out_mass <- glmmTMB(data=mpaes_Na, dry_weight_g ~ ecotype*treatment + (1|pair/pop_code))
+summary(out_mass)
+out_area <- glmmTMB(data=mpaes_Na, area_cm2 ~ ecotype*treatment + (1|pair/pop_code))
+summary(out_area)
+# For molarity only, removed pair from model due to non-Hessian convergence warning
+# Random effects explained very little variance and fixed effects estimates were the same
+out_M <- glmmTMB(data=mpaes_Na, molarity ~ ecotype*treatment + (1|pop_code))
+
+
+
+
+# Plot EMMs for main text Fig 3.
+M_plot <- emmeans(out_M, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+  aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Spray Treatment",y="Concentration of Na (M)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+  
+umol_plot <- emmeans(out_excl, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+  aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Spray Treatment",y="umol Na per cm^2 leaf")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+succ_plot <- emmeans(out_suc, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+  aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Spray Treatment",y="Succulence (g H2O / cm^2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(.75,.90))
+
+salt_excl_fig <- plot_grid(M_plot, umol_plot, succ_plot, ncol = 3, labels = c("A", "B", "C"), label_size=18, align="hv")
+
+save_plot("./Results/Figures/salt_exclusion_lsms.svg", plot=salt_excl_fig, base_width = 9, base_height = 5)
+
+lma_plot <- emmeans(out_lma, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+  aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Spray Treatment",y="LMA (g / m2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="right")
+save_plot("./Results/Figures/lma_lsms.svg", plot=lma_plot, base_width = 5, base_height = 5)
+
+
+# Plot accession means and standard errors for supplemental salt spray exclusion figure
+# Make dataframes with means and standard errors for each trait
+
+acc_excl_means <- mpaes_Na %>% group_by(pop_code, treatment) %>% summarise(mean_umol = mean(umol_per_area),
+                                              se_umol = sd(umol_per_area)/sqrt(length(umol_per_area)))
+
+acc_excl_means$ecotype <- case_when(acc_excl_means$pop_code %in% coastal_pops ~ "coastal",
+                                    acc_excl_means$pop_code %in% inland_pops ~ "inland")
+
+acc_M_means <- mpaes_Na %>% filter(!is.na(molarity)) %>% group_by(pop_code, treatment) %>% summarise(mean_M = mean(molarity),
+                                                                        se_M = sd(molarity)/sqrt(length(molarity)))
+acc_M_means$ecotype <- case_when(acc_M_means$pop_code %in% coastal_pops ~ "coastal",
+                                 acc_M_means$pop_code %in% inland_pops ~ "inland")
+
+acc_succ_means <- mpaes_Na %>% filter(!is.na(succulence)) %>% group_by(pop_code, treatment) %>% summarise(mean_succ = mean(succulence),
+                                                                                                     se_succ = sd(succulence)/sqrt(length(succulence)))
+acc_succ_means$ecotype <- case_when(acc_succ_means$pop_code %in% coastal_pops ~ "coastal",
+                                    acc_succ_means$pop_code %in% inland_pops ~ "inland")
+
+acc_lma_means <- mpaes_Na %>% filter(!is.na(lma)) %>% group_by(pop_code, treatment) %>% summarise(mean_lma = mean(lma),
+                                                                                                          se_lma = sd(lma)/sqrt(length(lma)))
+acc_lma_means$ecotype <- case_when(acc_lma_means$pop_code %in% coastal_pops ~ "coastal",
+                                   acc_lma_means$pop_code %in% inland_pops ~ "inland")
+
+shapes <- c(21,21,22,22,25,25,21,21,23,23,24,24,23,23,25,25,22,22,24,24)
+
+acc_M_plot <- acc_M_means %>% ggplot() + aes(x=treatment, y=mean_M, fill=ecotype)+
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean_M - se_M, ymax = mean_M + se_M, col=ecotype), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Spray Treatment",y="Concentration of Na (M)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+
+acc_excl_plot <- acc_excl_means %>% ggplot() + aes(x=treatment, y=mean_umol, fill=ecotype) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean_umol - se_umol, ymax = mean_umol + se_umol, col=ecotype), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+labs(x="Spray Treatment",y="μmol Na per cm2 leaf")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+acc_succ_plot <- acc_succ_means %>% ggplot() + aes(x=treatment, y=mean_succ, fill=ecotype) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean_succ - se_succ, ymax = mean_succ + se_succ, col=ecotype), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Spray Treatment",y="Succulence (g H2O / cm2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(.75,.90))
+
+salt_excl_supp_fig <- plot_grid(acc_M_plot, acc_excl_plot, acc_succ_plot, ncol = 3, labels = c("A", "B", "C"), label_size=18, align="hv")
+save_plot("./Results/Figures/salt_exclusion_accession_means.svg", plot=salt_excl_supp_fig, base_width = 9, base_height = 5)
+
+acc_lma_plot <- acc_lma_means %>% ggplot() + aes(x=treatment, y=mean_lma, fill=ecotype)+
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(aes(ymin = mean_lma - se_lma, ymax = mean_lma + se_lma, col=ecotype), 
+                  position=position_jitter(width=0.3), cex=1,
+                  linetype='solid', shape=shapes) +
+  labs(x="Spray Treatment",y="LMA (g/m2)")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(.15,.90))
+
+save_plot("./Results/Figures/lma_accession_means.svg", plot=acc_lma_plot, base_width = 5, base_height = 5)
+
+
+
 ## Let's make tables!!
 
-out_excl <- glmmTMB(data=mpaes_Na, umol_per_area ~ pop_code+treatment)
-summary(out_excl)
-out.emmeans <- emmeans(out_excl, specs="pop_code")
-pairs(out.emmeans)
+
 # tell kable not to plot NAs
 options(knitr.kable.NA = '')
 
-# Make a function that takes a nested ANOVA and outputs a formatted table and a CSV
-anovaTable <- function(model, title){
-  # make vector of sources of variation
-  sov <- c("Treatment", "Ecotype", "Treatment:Ecotype", "Treatment:Ecotype:Accession", "Error")
-  # make vector to describe what effect sizes indicate
-  effect_meaning <- c("Salt", "Inland", "Salt:Inland", "", "")
-  # vector of main and nested effects
-  effects <- c(as.numeric(model$coefficients[2]), as.numeric(model$coefficients[3]),
-               as.numeric(model$coefficients[4]), "", "")
-  tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(model)$Df, 
-                             anova(model)$F, anova(model)$`Pr(>F)`))
-  colnames(tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
-  unformatted <- tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
-                 F = round(as.numeric(F), 2),
-                 `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
-                                       .default = as.character(round(as.numeric(`p-value`), 5))))
-  write.csv(unformatted, file = paste("./Results/Tables/tables_CSV_format/", title, "_ecotype_anova_table.csv", sep=""), row.names=FALSE)
-  unformatted %>%
-    kbl(caption = title) %>% kable_classic() %>% 
-    row_spec(which(as.numeric(tbl$`p-value`) < 0.05), bold=T) %>%
-    save_kable(paste("./temp/", title, "_ecotype_anova_table.html", sep="")) %>% 
-    webshot(paste("./Results/Tables/", title, "_ecotype_anova_table.pdf", sep=""), vwidth = 496)
+# Make a function that takes a model and outputs a CSV of fixed effects, std error, and their significance
+glmmtmbTable <- function(model, title){
+  summary(model)
+  # make vector of effects and what they mean
+  effect <- c("Intercept(coastal water)", "Ecotype(inland)", "Treatment(salt)", "Treatment(salt):Ecotype(inland)")
+  tbl <- as.data.frame(cbind(effect, coef(summary(model))$cond[,c(1:4)]))
   
+  colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
+  csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
+                 SE = round(as.numeric(SE), 4),
+                 `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
+                                       .default = as.character(round(as.numeric(`p-value`), 4))))
+  write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)
 }
+glmmtmbTable(out_M, "molarity")
+glmmtmbTable(out_excl, "umol_per_area")
+glmmtmbTable(out_suc, "succulence")
+glmmtmbTable(out_lma, "lma")
 
-anovaTable(m_nest_umol, "Sodium Exclusion")
-anovaTable(m_nest_suc, "Succulence")
-anovaTable(m_nest_lma, "LMA")
-anovaTable(m_nest_M, "Concentration of Na (M)")
-
-# Make figures showing LSMs of each accession as a function of ecotype and treatment
-
-
-# Let's try a plot showing LSMs
-shapes <- rep(c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24), 2)
-
-lsms <- emmip(m_nest_suc, pop_code ~ ecotype*treatment,CIs=TRUE, plotit=FALSE)
-
-lsms$color <- ifelse(lsms$ecotype == "coastal", '#514663', '#cacf85')
-
-succulence_plot <- emmip(m_nest_suc, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
-                         dotarg = list(shape = shapes, cex = 5, col="black",
-                                       fill = lsms$color), 
-                         linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
-  ylab('Succulence (g H2O / cm^2)') + xlab("Spray Treatment and Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
-
-
-lma_lsm_plot <- emmip(m_nest_lma, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
-                      dotarg = list(shape = shapes, cex = 5, col="black",
-                                    fill = lsms$color), 
-                      linearg = list(linetype="solid", col="black"), type = "response", plotit = T, dodge = 0.4) +
-  ylab('LMA (g/m^2)') + xlab("Spray Treatment and Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
-
-ggsave(lma_lsm_plot, 
-       filename = "lma_lsm_ecotype_salt.svg", 
-       path = "./Results/Figures/SVGs_for_MS/",
-       device="svg", width = 4, height = 3.5, units = "in")
-
-M_plot <- emmip(m_nest_M, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
-                dotarg = list(shape = shapes, cex = 5, col="black",
-                              fill = lsms$color), 
-                linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
-  ylab('Concentration of Na (M)') + xlab("Spray Treatment and Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
-
-umol_plot <- emmip(m_nest_umol, pop_code ~ ecotype*treatment,CIs=TRUE, col = lsms$color,
-                   dotarg = list(shape = shapes, cex = 5, col="black",
-                                 fill = lsms$color), 
-                   linearg = list(linetype="solid", col="black"), type = "response", nesting.order=TRUE, plotit = T, dodge = 0.4) +
-  ylab('umol Na per cm^2 leaf') + xlab("Spray Treatment and Ecotype") +
-  theme(axis.text = element_text(size = 12)) +
-  scale_x_discrete(limits = c("coastal water", "coastal salt", "inland water", "inland salt"))
-
-ggsave(ggarrange(M_plot, umol_plot, succulence_plot, 
-                 nrow=1, ncol=3), 
-       filename = "salt_response_lsms_ecotype1.svg", 
-       path = "./Results/Figures/SVGs_for_MS/",
-       device="svg", width = 10, height = 3.5, units = "in")

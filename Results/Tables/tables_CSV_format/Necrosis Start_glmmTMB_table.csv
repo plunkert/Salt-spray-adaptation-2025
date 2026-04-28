@@ -1,0 +1,5 @@
+"Effect","Estimate","SE","z-value","p-value"
+"Intercept(coastal water)",7.8333,0.3243,"24.1569957175742","<0.0001"
+"Ecotype(inland)",0.7682,0.4626,"1.66060300352486","0.0968"
+"Treatment(salt)",-1.796,0.2851,"-6.2994337102353","<0.0001"
+"Treatment(salt):Ecotype(inland)",-1.5674,0.407,"-3.85126010544671","1e-04"

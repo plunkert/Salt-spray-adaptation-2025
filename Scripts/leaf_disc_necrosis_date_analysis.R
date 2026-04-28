@@ -6,6 +6,7 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 library(emmeans)
+library(glmmTMB)
 
 dat <- read_excel("~/Documents/Github/Salt-spray-adaptation-2025/Data/Leaf_disc_date_data.xlsx")
 View(dat)
@@ -42,48 +43,27 @@ dat$treatment <- str_to_lower(dat$treatment)
 # indicate combinations of ecotype and treatment for easier plotting
 dat$eco_trt <- paste(dat$ecotype, dat$treatment, sep=" ")
 
+# indicate which pair each accession belongs to
+dat$pair <- case_when(dat$pop == "OPB" | dat$pop == "RGR" ~ "OPB/RGR",
+                      dat$pop == "HEC" | dat$pop == "SWC" ~ "HEC/SWC",
+                      dat$pop == "BHE" | dat$pop == "OAE" ~ "BHE/OAE",
+                      dat$pop == "SWB" | dat$pop == "LMC" ~ "SWB/LMC",
+                      dat$pop == "PGR" | dat$pop == "TOR" ~ "PGR/TOR",
+                           .default=NA_character_) %>% as.factor()
+
+
 # test for interaction between ecotype and treatment for start of necrosis
-m_tol <- lm(data=dat, est_start ~ ecotype * treatment)
-summary(m_tol)
-m_tol_emm <- emmeans(m_tol, ~ ecotype*treatment)
-contrast(m_tol_emm, method="tukey", adjust='bh')
+
+out_start <- glmmTMB(data=dat, est_start ~ ecotype * treatment + (1|pair/pop))
+summary(out_start)
 
 # test for interaction between ecotype and treatment for full necrosis
-m_tol <- lm(data=dat, est_full ~ ecotype * treatment)
-summary(m_tol)
-m_tol_emm <- emmeans(m_tol, ~ ecotype*treatment)
-contrast(m_tol_emm, method="tukey", adjust='bh')
-
-# box plot for costal populations vs inland populations comparing control and salt
-dat %>% ggplot() +
-  aes(x = ecotype, fill = ecotype, y = est_start) +
-  geom_boxplot(outliers = F) +
-  geom_jitter(position=position_jitter(0.1)) +
-  # Labels
-  scale_x_discrete(name = 'Treatment') +
-  scale_y_continuous(
-    name = 'Days til start of necrosis',
-  ) +
-  # Style
-  scale_fill_manual(values = c('#514663', '#CACF85')) +
-  theme_minimal() +
-  theme(
-    legend.position = "none",
-    axis.text = element_text(size=12),
-    axis.title = element_text(size=14),
-  )
-
-m_nest_start <- aov(data=dat, est_start ~ treatment * ecotype/pop)
-summary(m_nest_start)
-coefficients(m_nest_start)
-
-m_nest_full <- aov(data=dat, est_full ~ treatment * ecotype/pop)
-summary(m_nest_full)
-coefficients(m_nest_full)
+out_full <- glmmTMB(data=dat, est_full ~ ecotype * treatment + (1|pair/pop))
+summary(out_full)
 
 # Residual diagnostics to see if data meet assumptions
-res.vals <- resid(m_nest_start)
-pred.vals <- fitted(m_nest_start) # Fitted values
+res.vals <- resid(out_start)
+pred.vals <- fitted(out_start) # Fitted values
 # Is there a pattern in the residuals?
 plot(pred.vals, res.vals, main = "Residuals vs. pred.vals values",
      las = 1, xlab = "Predicted values", ylab = "Residuals", pch = 19)
@@ -93,7 +73,50 @@ abline(h = 0)
 qqnorm(res.vals, pch = 19)
 qqline(res.vals, col = 'red')
 
-# Plot LSM times to start of necrosis
+# Plot LSM times to start of necrosis for ecotype and treatment combos
+start_necrosis_plot <- emmeans(out_start, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+  aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Media Treatment",y="Days to start of necrosis")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position="none")
+
+full_necrosis_plot <- emmeans(out_start, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+  aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
+  scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
+  geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
+  labs(x="Media Treatment",y="Days to full necrosis")+
+  theme_bw()+
+  theme(axis.text = element_text(size = 16), legend.position=c(0.75, 0.9))
+
+
+# Cheating a little to make multipanel figures; need to have succulence figure from 
+# leaf_surface_trait_analysis_clean.R run to make this work
+tolerance_fig <- plot_grid(succ_ecotype_plot, start_necrosis_plot, full_necrosis_plot, ncol = 3, labels = "AUTO", label_size=18, align="hv")
+
+save_plot("./Results/Figures/tolerance_main_text_fig_lsm.svg", plot=tolerance_fig, base_width = 9, base_height = 5)
+
+# Make a function that takes a model and outputs a CSV of fixed effects, std error, and their significance
+glmmtmbTable <- function(model, title){
+  summary(model)
+  # make vector of effects and what they mean
+  effect <- c("Intercept(coastal water)", "Ecotype(inland)", "Treatment(salt)", "Treatment(salt):Ecotype(inland)")
+  tbl <- as.data.frame(cbind(effect, coef(summary(model))$cond[,c(1:4)]))
+  
+  colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
+  csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
+                        SE = round(as.numeric(SE), 4),
+                        `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
+                                              .default = as.character(round(as.numeric(`p-value`), 4))))
+  write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)
+}
+
+glmmtmbTable(out_start, "Necrosis Start")
+glmmtmbTable(out_full, "Necrosis Full")
+
 
 shapes <- rep(c(21, 22, 23, 24, 25, 25, 21, 23, 22, 24), 2)
 
