@@ -345,6 +345,7 @@ glmmtmbTableEco <- function(model, title){
   colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
   csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
                         SE = round(as.numeric(SE), 4),
+                        `z-value` = round(as.numeric(SE), 1),
                         `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
                                               .default = as.character(round(as.numeric(`p-value`), 4))))
   write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)

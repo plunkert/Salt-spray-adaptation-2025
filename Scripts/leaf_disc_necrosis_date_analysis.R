@@ -109,6 +109,7 @@ glmmtmbTable <- function(model, title){
   colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
   csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
                         SE = round(as.numeric(SE), 4),
+                        `z-value` = round(as.numeric(SE), 1),
                         `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
                                               .default = as.character(round(as.numeric(`p-value`), 4))))
   write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)
@@ -151,34 +152,3 @@ ggsave(start_plot,
        path = "./Results/Figures/SVGs_for_MS/",
        device="svg", width = 6, height = 6, units = "in")
 
-
-# Make tables reporting nested ANOVA results
-
-# Make a function that takes a nested ANOVA and outputs a formatted table and a CSV
-anovaTable <- function(model, title){
-  # make vector of sources of variation
-  sov <- c("Treatment", "Ecotype", "Treatment:Ecotype", "Treatment:Ecotype:Accession", "Error")
-  # make vector to describe what effect sizes indicate
-  effect_meaning <- c("Salt", "Inland", "Salt:Inland", "", "")
-  # vector of main and nested effects
-  effects <- c(as.numeric(model$coefficients[2]), as.numeric(model$coefficients[3]),
-               as.numeric(model$coefficients[4]), "", "")
-  tbl <- as.data.frame(cbind(sov, effect_meaning, effects, anova(model)$Df, 
-                             anova(model)$F, anova(model)$`Pr(>F)`))
-  colnames(tbl) <- c("Source of variation", "Effect of", "Effect size", "df", "F", "p-value")
-  unformatted <- tbl %>% mutate(`Effect size` = round(as.numeric(`Effect size`), 5),
-                 F = round(as.numeric(F), 2),
-                 `p-value` = case_when(as.numeric(`p-value`) < 0.00001 ~ "<0.00001",
-                                       .default = as.character(round(as.numeric(`p-value`), 5))))
-  write.csv(unformatted, file = paste("./Results/Tables/tables_CSV_format/", title, "_ecotype_anova_table.csv", sep=""), row.names=FALSE)
-  unformatted %>%
-    kbl(caption = title) %>% kable_classic() %>% 
-    row_spec(which(as.numeric(tbl$`p-value`) < 0.05), bold=T) %>%
-    save_kable(paste("./temp/", title, "_ecotype_anova_table.html", sep="")) %>% 
-    webshot(paste("./Results/Tables/", title, "_ecotype_anova_table.pdf", sep=""), vwidth = 496)
-  
-}
-
-anovaTable(m_nest_start, "Days to Start of Necrosis")
-
-anovaTable(m_nest_full, "Days to Full Necrosis")
