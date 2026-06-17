@@ -7,8 +7,8 @@ library(dplyr)
 library(ggplot2)
 library(emmeans)
 library(glmmTMB)
-
-dat <- read_excel("~/Documents/Github/Salt-spray-adaptation-2025/Data/Leaf_disc_date_data.xlsx")
+setwd("~/Documents/Github/Salt-spray-adaptation-2025/")
+dat <- read_excel("./Data/Leaf_disc_date_data.xlsx")
 View(dat)
 colnames(dat) <- c("leaf_id", "est_start", "est_full", "Notes_1", "Notes_2", "disc_num" )
 
@@ -30,6 +30,7 @@ dat$ecotype <- as.factor(case_when(
   dat$pop %in% c('SWC', 'LMC', 'TOR', 'OAE', 'RGR') ~ "inland"))
 View(dat)
 hist(dat$est_start)
+hist(dat$est_full)
 
 # Lots of rows omitted due to missing data, mainly algae growth preventing 
 # scoring of necrosis and blocking tissue from salt exposure. How many of each accession did
@@ -83,7 +84,7 @@ start_necrosis_plot <- emmeans(out_start, specs=c("ecotype", "treatment")) %>% a
   theme_bw()+
   theme(axis.text = element_text(size = 16), legend.position="none")
 
-full_necrosis_plot <- emmeans(out_start, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
+full_necrosis_plot <- emmeans(out_full, specs=c("ecotype", "treatment")) %>% as.data.frame() %>% ggplot() +
   aes(x=treatment, y=emmean, fill = ecotype, col=ecotype, shape=ecotype, ymax=upper.CL, ymin=lower.CL) +
   scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
   scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
@@ -109,7 +110,7 @@ glmmtmbTable <- function(model, title){
   colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
   csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
                         SE = round(as.numeric(SE), 4),
-                        `z-value` = round(as.numeric(SE), 1),
+                        `z-value` = round(as.numeric(SE), signif(3)),
                         `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
                                               .default = as.character(round(as.numeric(`p-value`), 4))))
   write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)

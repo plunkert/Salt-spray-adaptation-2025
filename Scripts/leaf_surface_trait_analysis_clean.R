@@ -64,8 +64,8 @@ stomata_counts <-  read_excel('./Data/stomatal density data.xlsx', sheet="Sheet1
   ) %>%
   # Create more stomata columns
   mutate(
-    # Adaxial vs. abaxial ratio, 1 = equal stomata, >1 more stomata on abaxial side
-    amphistomy = stomata_count_ad / stomata_count_ab,
+    # stomatal ratio, 0.5 = equal stomata, >0.5 more stomata on adaxial side
+    amphistomy = stomata_count_ad / (stomata_count_ad + stomata_count_ab),
     # Stomatal density in stomata/mm^2 by dividing by field of view
     stom_density_ad = stomata_count_ad/0.94372,
     stom_density_ab = stomata_count_ab/0.94372,
@@ -283,8 +283,8 @@ amphistomy_plot <- emmeans(out_amph, specs="ecotype") %>% as.data.frame() %>% gg
   scale_fill_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
   scale_color_manual(values=c('#514663','#cacf85', '#514663','#cacf85'))+
   geom_pointrange(position = position_dodge(width = .45), size=1.2) + 
-  labs(x="Ecotype",y="Amphistomy (adaxial/abaxial)")+
-  geom_hline(yintercept=1, linetype="dashed")+
+  labs(x="Ecotype",y="Amphistomy (adaxial/total)")+
+  geom_hline(yintercept=0.5, linetype="dashed")+
   theme_bw()+
   theme(axis.text = element_text(size = 16), legend.position="none")
 
@@ -345,7 +345,7 @@ glmmtmbTableEco <- function(model, title){
   colnames(tbl) <- c("Effect", "Estimate", "SE", "z-value", "p-value")
   csv <- tbl %>% mutate(Estimate = round(as.numeric(Estimate), 4),
                         SE = round(as.numeric(SE), 4),
-                        `z-value` = round(as.numeric(SE), 1),
+                        `z-value` = round(as.numeric(SE), signif(3)),
                         `p-value` = case_when(as.numeric(`p-value`) < 0.0001 ~ "<0.0001",
                                               .default = as.character(round(as.numeric(`p-value`), 4))))
   write.csv(csv, file = paste("./Results/Tables/tables_CSV_format/", title, "_glmmTMB_table.csv", sep=""), row.names=FALSE)
