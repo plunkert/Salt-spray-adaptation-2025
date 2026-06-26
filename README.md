@@ -1,7 +1,7 @@
 # Overview
 This repository contains data, R scripts, figures, and tables associated with a study of salt spray exclusion and tolerance strategies in locally adapted coastal yellow monkeyflower.
 
-If used, please cite as: Plunkert M., Durant P.C., Egeler K., and Lowry, D. 2025. bioRxiv. Foliar salt spray exclusion and tissue tolerance underlie local adaptation to oceanic salt spray
+Plunkert M., Durant P.C., Egeler K., and Lowry, D. 2026. Foliar salt spray exclusion and tissue tolerance underlie local adaptation to oceanic salt spray.
 
 # Scripts
 
