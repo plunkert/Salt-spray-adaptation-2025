@@ -511,9 +511,9 @@ acc_amph_plot <- amph_means %>% ggplot() + aes(x=ecotype_vec, y=mean, fill=ecoty
   geom_pointrange(aes(ymin = mean - se, ymax = mean + se, col=ecotype_vec), 
                   position=position_jitter(width=0.3), cex=1,
                   linetype='solid', shape=shapes) +
-  labs(x="Ecotype", y="Amphistomy (adaxial/abaxial)")+
+  labs(x="Ecotype", y="Amphistomy (adaxial/total)")+
   theme_bw()+
-  geom_hline(yintercept=1, linetype="dashed")+
+  geom_hline(yintercept=0.5, linetype="dashed")+
   theme(axis.text = element_text(size = 16), legend.position="none")
 
 stomata_acc_supp_fig <- plot_grid(acc_stom_dens_ad_plot, acc_stom_len_ad_plot, acc_frac_ad_plot,
