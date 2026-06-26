@@ -34,13 +34,13 @@ base <- ggplot(data = ca_or_nv_wa,
                      group = group))+
   geom_polygon(colour="gray", fill = "white") +
   guides(fill = FALSE)+
-  coord_map(projection = "mercator")+
+  coord_map(projection = "mercator", xlim=c(-126, -118), ylim = c(35, 47))+
   #coord_fixed()+
   theme(axis.title=element_blank(),
         panel.background=element_rect(fill = "lightsteelblue2", colour = "black"),
-        panel.border=element_blank(),
-        panel.grid=element_line(colour = "lightsteelblue2"))
-
+        panel.grid=element_line(colour = "lightsteelblue2"),
+        element_rect(colour = "black", fill=NA, linewidth=3))
+        
 dat$adjust <- case_when(dat$Ecotype=="coastal" ~ -1.2,
                         dat$Ecotype=="inland" ~ 1.2)
 
@@ -52,13 +52,15 @@ points_map <- base +
   scale_fill_manual(values = c('#514663', '#cacf85'), labels=c("Coastal", "Inland"), name=NULL)+
   scale_color_manual("black", "black", name=NULL)
 
+
 ggsave(
-  filename = 'Leaf_surface_accession_map.svg', 
+  filename = 'Leaf_surface_accession_map.pdf', 
   plot = points_map,
-  device = 'svg',
-  path = './Results/Figures/SVGs_for_MS/',
+  device = 'pdf',
+  path = './Results/Figures/',
   scale = 1,
-  bg = 'white'
+  bg = 'white',
+  width=3.5
 )
 
 
